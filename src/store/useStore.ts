@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { mockClasses } from '@/lib/mockData';
 import { Student, VirtualClass } from '@/types/shared';
 
 interface AppState {
@@ -8,11 +7,12 @@ interface AppState {
     addStudent: (student: Student) => void;
     setStudents: (students: Student[]) => void;
     addClass: (newClass: VirtualClass) => void;
+    setClasses: (classes: VirtualClass[]) => void;
 }
 
 export const useStore = create<AppState>((set) => ({
     students: [],
-    classes: [...mockClasses],
+    classes: [],
 
     addStudent: (student) => set((state) => ({
         students: [...state.students, student]
@@ -21,6 +21,8 @@ export const useStore = create<AppState>((set) => ({
     setStudents: (students) => set({ students }),
 
     addClass: (newClass) => set((state) => ({
-        classes: [...state.classes, newClass]
+        classes: [newClass, ...state.classes] // Add to beginning
     })),
+
+    setClasses: (classes) => set({ classes }),
 }));

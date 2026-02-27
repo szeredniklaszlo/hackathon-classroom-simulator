@@ -3,22 +3,33 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { mockClasses, mockStudents } from '@/lib/mockData';
 import { Student, TranscriptEntry } from '@/types/shared';
+import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
 import { Play, Square, Save, UserPlus, Hand, ArrowLeft, Clock, Mic, MicOff } from 'lucide-react';
 import Link from 'next/link';
 import { useAzureSTT } from '@/hooks/useAzureSTT';
+import StudentCard from '@/components/classroom/StudentCard';
 
 export default function VirtualClassroom() {
     const params = useParams();
     const router = useRouter();
     const classId = params.id as string;
 
-    // Find initial class or fallback
-    const initialClass = mockClasses.find(c => c.id === classId) || mockClasses[0];
+    const { classes, students: globalStudents } = useStore();
 
-    const [students, setStudents] = useState<Student[]>(initialClass.students);
+    // Find initial class or fallback
+    const initialClass = classes.find(c => c.id === classId);
+
+    // If classes are not loaded yet or invalid ID, show loading or redirect
+    useEffect(() => {
+        if (classes.length > 0 && !initialClass) {
+            toast.error("Class not found.");
+            router.push('/dashboard');
+        }
+    }, [classes, initialClass, router]);
+
+    const [students, setStudents] = useState<Student[]>(initialClass?.students || []);
     const [isPlaying, setIsPlaying] = useState(false);
     const [seconds, setSeconds] = useState(0);
     const [liveTranscript, setLiveTranscript] = useState<TranscriptEntry[]>([]);
@@ -88,14 +99,26 @@ export default function VirtualClassroom() {
                         if (data.responses && data.responses.length > 0) {
                             setStudents(prev => {
                                 const updated = [...prev];
+
+                                // Először mindenkinek töröljük az előző cselekvését (hogy eltűnjenek a régi szövegbuborékok)
+                                // De a hangulatuk/engagement marad
+                                updated.forEach(s => {
+                                    s.currentAction = 'LISTEN';
+                                    s.currentMessage = null;
+                                    s.raisedHand = false;
+                                });
+
                                 data.responses.forEach((res: any) => {
                                     const idx = updated.findIndex(s => s.id === res.studentId);
                                     if (idx !== -1) {
                                         updated[idx] = {
                                             ...updated[idx],
                                             moodScore: res.newEngagement,
+                                            currentAction: res.action,
+                                            currentMessage: res.message,
+                                            raisedHand: res.action === 'RAISE_HAND',
                                         };
-                                        if (res.spoke && res.message) {
+                                        if (res.action !== 'LISTEN' && res.action !== 'RAISE_HAND' && res.message) {
                                             newEntries.push({
                                                 id: `s-${res.studentId}-${Date.now()}`,
                                                 speaker: updated[idx].name,
@@ -175,16 +198,18 @@ export default function VirtualClassroom() {
 
     const handleAddStudent = () => {
         // Pick a random student not already in the class (or just generate a clone if all are added)
-        const available = mockStudents.filter(s => !students.find(cs => cs.id === s.id));
+        const available = globalStudents.filter(s => !students.find(cs => cs.id === s.id));
         if (available.length > 0) {
             const newStudent = available[Math.floor(Math.random() * available.length)];
             setStudents([...students, newStudent]);
-            toast.success(`Added ${newStudent.name} to the classroom.`);
-        } else {
+            toast.success(`Hazádtuk a fiktív diákot: ${newStudent.name}`);
+        } else if (globalStudents.length > 0) {
             // Just clone one for demo purposes
-            const clone = { ...mockStudents[Math.floor(Math.random() * mockStudents.length)], id: `s${Date.now()}` };
+            const clone = { ...globalStudents[Math.floor(Math.random() * globalStudents.length)], id: `s${Date.now()}` };
             setStudents([...students, clone]);
-            toast.success(`Generated new student: ${clone.name} (Clone)`);
+            toast.success(`Hozzáadtunk egy klónozott diákot: ${clone.name}`);
+        } else {
+            toast.error("Nincs elég diák az adatbázisban.");
         }
     };
 
@@ -205,6 +230,14 @@ export default function VirtualClassroom() {
         if (score < 70) return "bg-amber-50 dark:bg-amber-900/20";
         return "bg-green-50 dark:bg-green-900/20";
     };
+
+    if (!initialClass) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] dark:bg-slate-950 text-slate-500">
+                <div className="animate-pulse">Loading simulation...</div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-950 flex flex-col">
@@ -264,32 +297,7 @@ export default function VirtualClassroom() {
                         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 auto-rows-fr h-full place-items-center">
                             <AnimatePresence>
                                 {students.map((student, idx) => (
-                                    <motion.div
-                                        key={student.id}
-                                        initial={{ opacity: 0, scale: 0.9 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.9 }}
-                                        transition={{ delay: idx * 0.05 }}
-                                        className={`h-full w-full max-w-[240px] aspect-square rounded-[2rem] border-2 flex flex-col items-center justify-center p-4 relative shadow-sm transition-all duration-500
-                      ${getMoodBg(student.moodScore)} border-white ring-1 ring-slate-900/5 hover:shadow-md
-                    `}
-                                    >
-                                        {/* Hand Raise Indicator */}
-                                        {student.raisedHand && (
-                                            <div className="absolute -top-3 -right-3 bg-white dark:bg-slate-800 p-2 rounded-full shadow-lg border border-slate-100 dark:border-slate-700 z-10 animate-bounce">
-                                                <Hand className="text-amber-500 fill-amber-100" size={24} />
-                                            </div>
-                                        )}
-
-                                        <div className="text-6xl mb-4 bg-white/50 dark:bg-white/10 w-24 h-24 rounded-full flex items-center justify-center shadow-inner border border-white dark:border-white/10 backdrop-blur-sm">
-                                            {student.emoji}
-                                        </div>
-
-                                        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur px-4 py-2 rounded-xl text-center shadow-sm w-full border border-white/50 dark:border-slate-700/50">
-                                            <h4 className="font-extrabold text-slate-800 dark:text-slate-100 tracking-tight text-lg">{student.name}</h4>
-                                            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">{student.type} • {student.age}y</p>
-                                        </div>
-                                    </motion.div>
+                                    <StudentCard key={student.id} student={student} idx={idx} />
                                 ))}
                             </AnimatePresence>
                         </div>

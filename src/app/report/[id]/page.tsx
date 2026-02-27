@@ -3,7 +3,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { mockTranscript, mockAIFeedback, mockClasses } from '@/lib/mockData';
+import { mockTranscript, mockAIFeedback } from '@/lib/mockData';
+import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
 import { Download, Save, CheckCircle2, AlertCircle, Lightbulb, ArrowLeft, PenLine, RefreshCcw } from 'lucide-react';
 import html2canvas from 'html2canvas';
@@ -15,8 +16,12 @@ import { TranscriptEntry } from '@/types/shared';
 export default function VirtualDiary() {
     const params = useParams();
     const router = useRouter();
+    const { classes } = useStore();
     const classId = params.id as string;
-    const currentClass = mockClasses.find(c => c.id === classId) || mockClasses[0];
+    const currentClass = classes.find(c => c.id === classId);
+
+    // If classes are empty or not found, fallback to loading or safe defaults safely
+    // (A real app would fetch here if empty)
 
     const reportRef = useRef<HTMLDivElement>(null);
     const [notes, setNotes] = useState('');
@@ -195,7 +200,7 @@ export default function VirtualDiary() {
             });
 
             pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-            pdf.save(`Class_Report_${currentClass.subject.replace(/[^a-z0-9]/gi, '_')}.pdf`);
+            pdf.save(`Class_Report_${(currentClass?.subject || 'report').replace(/[^a-z0-9]/gi, '_')}.pdf`);
 
             toast.success("PDF Downloaded successfully!");
         } catch (error) {
@@ -265,10 +270,10 @@ export default function VirtualDiary() {
 
                     {/* Header Info */}
                     <div className="border-b border-slate-100 dark:border-slate-800 pb-6 mb-8 text-center sm:text-left">
-                        <h2 className="text-3xl font-extrabold text-slate-900 dark:text-slate-100 mb-2">{currentClass.subject}</h2>
+                        <h2 className="text-3xl font-extrabold text-slate-900 dark:text-slate-100 mb-2">{currentClass?.subject || 'Beszámoló'}</h2>
                         <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 text-sm font-medium text-slate-500 dark:text-slate-400">
-                            <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full"><span className="text-lg">{currentClass.emoji}</span> {currentClass.name}</span>
-                            <span className="bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">{currentClass.students.length} Students</span>
+                            <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full"><span className="text-lg">{currentClass?.emoji || '📚'}</span> {currentClass?.name || 'Ismeretlen Osztály'}</span>
+                            <span className="bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">{currentClass?.students?.length || 0} Students</span>
                             <span className="bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">{new Date().toLocaleDateString()}</span>
                         </div>
                     </div>
