@@ -3,6 +3,8 @@
 import { useStore } from '@/store/useStore';
 import { BrainCircuit, PlayCircle, PlusCircle, UserPlus, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { createClient } from '@/utils/supabase/client';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const mockChartData = [
@@ -17,12 +19,25 @@ export default function Dashboard() {
     const classes = useStore((state) => state.classes);
     // Display only up to 3 recent classes
     const recentClasses = classes.slice(0, 3);
+    const [userName, setUserName] = useState('Teacher');
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            const supabase = createClient();
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const name = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Teacher';
+                setUserName(name);
+            }
+        };
+        fetchUser();
+    }, []);
 
     return (
         <div className="mx-auto max-w-5xl space-y-8 animate-in fade-in zoom-in-95 duration-500">
             {/* Header */}
             <div>
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900">Good morning, Dr. Taylor 👋</h1>
+                <h1 className="text-3xl font-bold tracking-tight text-slate-900">Good morning, {userName} 👋</h1>
                 <p className="mt-1 text-slate-500">Ready to challenge your teaching skills today?</p>
             </div>
 

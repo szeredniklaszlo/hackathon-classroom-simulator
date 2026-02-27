@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LayoutDashboard, Users, UserSquare, BrainCircuit } from 'lucide-react';
-import clsx from 'clsx'; // Assuming standard CSS usage, or just tailwind template literals
+import { useEffect, useState } from 'react';
+import { createClient } from '@/utils/supabase/client';
 
 const navLinks = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -13,6 +14,27 @@ const navLinks = [
 
 export default function Sidebar() {
     const pathname = usePathname();
+    const [userName, setUserName] = useState('Teacher');
+    const [initials, setInitials] = useState('T');
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            const supabase = createClient();
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const name = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'Teacher';
+                setUserName(name);
+
+                const parts = name.split(' ').filter(Boolean);
+                let init = parts[0]?.[0] || 'T';
+                if (parts.length > 1) {
+                    init += parts[parts.length - 1][0];
+                }
+                setInitials(init.toUpperCase());
+            }
+        };
+        fetchUser();
+    }, []);
 
     return (
         <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-slate-200 bg-white transition-transform">
@@ -37,8 +59,8 @@ export default function Sidebar() {
                                 key={link.name}
                                 href={link.href}
                                 className={`flex items-center gap-3 rounded-xl px-4 py-3 font-medium transition-colors ${isActive
-                                        ? 'bg-primary/10 text-primary'
-                                        : 'text-slate-500 hover:bg-slate-100/80 hover:text-slate-900'
+                                    ? 'bg-primary/10 text-primary'
+                                    : 'text-slate-500 hover:bg-slate-100/80 hover:text-slate-900'
                                     }`}
                             >
                                 <Icon size={20} className={isActive ? 'text-primary' : 'text-slate-400'} />
@@ -52,10 +74,10 @@ export default function Sidebar() {
                 <div className="mt-8 rounded-2xl bg-slate-50 p-4 border border-slate-100">
                     <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-primary font-bold">
-                            TD
+                            {initials}
                         </div>
                         <div>
-                            <div className="text-sm font-bold text-slate-900">Dr. Taylor</div>
+                            <div className="text-sm font-bold text-slate-900">{userName}</div>
                             <div className="text-xs text-slate-500">Lead Educator</div>
                         </div>
                     </div>
