@@ -39,28 +39,28 @@ export async function POST(request: Request) {
             formattedTranscript += `[${entry.timestamp}] ${entry.speaker}: ${entry.text} ${entry.emotion ? '(Emotion: ' + entry.emotion + ')' : ''}\n`;
         });
 
-        const prompt = `Te egy oktatásszakértő és tréner vagy (AI Coach), aki pedagógusoknak ad visszajelzést a szimulált óráikon nyújtott teljesítményükről.
-Kérlek, elemezd az alábbi tanár-diák(ok) beszélgetést, és adj részletes angol vagy magyar (ahogy a beszélgetés nyelve is volt) visszajelzést 3 fő kategóriában.
-Kifejezetten a pedagógus kommunikációjára, osztálytermi menedzsmentjére, kérdezéstechnikájára, és diákok bevonására fókuszálj.
+        const prompt = `You are an educational expert and AI Coach providing feedback to teachers on their performance in a simulated classroom.
+Please analyze the following teacher-student(s) conversation and provide detailed feedback IN ENGLISH across 3 main categories.
+Focus specifically on the teacher's communication, classroom management, questioning techniques, and student engagement.
 
-Válaszolj KIZÁRÓLAG egy érvényes JSON objektummal, ami a következő formátumot követi (ne használj markdown blokkokat \`\`\`json, csak a nyers JSON-t add vissza!):
+Respond ONLY with a valid JSON object matching the format below (no markdown blocks, just raw JSON):
 {
   "wentWell": [
-    "Első pozitívum megfogalmazva",
-    "Második pozitívum megfogalmazva"
+    "First positive observation",
+    "Second positive observation"
   ],
   "toImprove": [
-    "Első fejlesztendő terület",
-    "Második fejlesztendő terület"
+    "First area for improvement",
+    "Second area for improvement"
   ],
   "suggestions": [
-    "Első konkrét gyakorlati jó tanács",
-    "Második jó tanács"
+    "First practical suggestion",
+    "Second practical suggestion"
   ]
 }
 
-Az átirat:
-${formattedTranscript}`;
+The transcript:
+\${formattedTranscript}`;
 
         const result = await client.chat.completions.create({
             model: process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "",
