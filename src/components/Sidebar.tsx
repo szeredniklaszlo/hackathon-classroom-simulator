@@ -37,14 +37,14 @@ export default function Sidebar() {
     }, []);
 
     return (
-        <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-slate-200 bg-white transition-transform">
+        <aside className="fixed left-0 top-0 z-40 h-screen w-64 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 transition-transform">
             <div className="flex h-full flex-col overflow-y-auto px-4 py-8">
                 {/* Logo Area */}
                 <Link href="/dashboard" className="mb-10 flex items-center gap-3 px-2">
                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white">
                         <BrainCircuit size={24} />
                     </div>
-                    <span className="text-xl font-bold tracking-tight text-slate-800">
+                    <span className="text-xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
                         MindSim AI
                     </span>
                 </Link>
@@ -59,11 +59,11 @@ export default function Sidebar() {
                                 key={link.name}
                                 href={link.href}
                                 className={`flex items-center gap-3 rounded-xl px-4 py-3 font-medium transition-colors ${isActive
-                                    ? 'bg-primary/10 text-primary'
-                                    : 'text-slate-500 hover:bg-slate-100/80 hover:text-slate-900'
+                                    ? 'bg-primary/10 text-primary dark:bg-sky-900/40 dark:text-sky-400'
+                                    : 'text-slate-500 hover:bg-slate-100/80 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800/80 dark:hover:text-slate-50'
                                     }`}
                             >
-                                <Icon size={20} className={isActive ? 'text-primary' : 'text-slate-400'} />
+                                <Icon size={20} className={isActive ? 'text-primary dark:text-sky-400' : 'text-slate-400 dark:text-slate-500'} />
                                 {link.name}
                             </Link>
                         );
@@ -71,14 +71,14 @@ export default function Sidebar() {
                 </nav>
 
                 {/* Teacher Profile Summary */}
-                <div className="mt-8 rounded-2xl bg-slate-50 p-4 border border-slate-100">
+                <div className="mt-8 rounded-2xl bg-slate-50 dark:bg-slate-800/50 p-4 border border-slate-100 dark:border-slate-700/50">
                     <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-primary font-bold">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-sky-900/60 text-primary dark:text-sky-300 font-bold">
                             {initials}
                         </div>
                         <div>
-                            <div className="text-sm font-bold text-slate-900">{userName}</div>
-                            <div className="text-xs text-slate-500">Lead Educator</div>
+                            <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{userName}</div>
+                            <div className="text-xs text-slate-500 dark:text-slate-400">Lead Educator</div>
                         </div>
                     </div>
                 </div>

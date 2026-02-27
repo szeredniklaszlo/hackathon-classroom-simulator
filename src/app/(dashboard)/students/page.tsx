@@ -169,12 +169,12 @@ export default function StudentsPage() {
             {/* Header */}
             <div className="mb-8 flex items-end justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-900">Student Personas</h1>
-                    <p className="mt-1 text-slate-500">Manage and create AI-driven student profiles.</p>
+                    <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Student Personas</h1>
+                    <p className="mt-1 text-slate-500 dark:text-slate-400">Manage and create AI-driven student profiles.</p>
                 </div>
                 <button
                     onClick={openCreateDrawer}
-                    className="flex items-center gap-2 rounded-xl bg-indigo-500 px-4 py-2 font-medium text-white shadow-sm transition-all hover:bg-indigo-600 hover:shadow-md active:scale-95"
+                    className="flex items-center gap-2 rounded-xl bg-indigo-500 dark:bg-indigo-600 px-4 py-2 font-medium text-white shadow-sm transition-all hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:shadow-md active:scale-95"
                 >
                     <Sparkles size={18} />
                     Generate Persona
@@ -184,11 +184,11 @@ export default function StudentsPage() {
             {/* Grid */}
             {isLoadingStudents ? (
                 <div className="flex h-64 items-center justify-center">
-                    <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+                    <Loader2 className="h-8 w-8 animate-spin text-indigo-500 dark:text-indigo-400" />
                 </div>
             ) : students.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-64 text-slate-500 bg-white rounded-2xl border border-slate-100 border-dashed">
-                    <UserPlus className="h-12 w-12 text-slate-300 mb-3" />
+                <div className="flex flex-col items-center justify-center h-64 text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-100 dark:border-slate-700/50 border-dashed">
+                    <UserPlus className="h-12 w-12 text-slate-300 dark:text-slate-600 mb-3" />
                     <p>No students generated yet.</p>
                 </div>
             ) : (
@@ -196,27 +196,27 @@ export default function StudentsPage() {
                     {students.map((student) => (
                         <div
                             key={student.id}
-                            className="group flex flex-col items-start overflow-hidden rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-100 transition-all hover:-translate-y-1 hover:shadow-md"
+                            className="group flex flex-col items-start overflow-hidden rounded-2xl bg-white dark:bg-slate-800/80 p-5 shadow-sm ring-1 ring-slate-100 dark:ring-slate-700/50 transition-all hover:-translate-y-1 hover:shadow-md hover:ring-indigo-500/20 dark:hover:ring-indigo-500/30"
                         >
                             <div className="flex w-full items-start justify-between">
-                                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 text-2xl shadow-sm">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 dark:bg-slate-700/50 text-2xl shadow-sm">
                                     {student.emoji}
                                 </div>
-                                <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
+                                <span className="inline-flex items-center rounded-full bg-blue-50 dark:bg-sky-900/30 px-2.5 py-0.5 text-xs font-semibold text-blue-700 dark:text-sky-300">
                                     {student.type}
                                 </span>
                             </div>
                             <div className="mt-4">
-                                <h3 className="text-lg font-bold text-slate-900">{student.name}</h3>
-                                <p className="text-sm font-medium text-slate-500">{student.age} years old</p>
+                                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">{student.name}</h3>
+                                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{student.age} years old</p>
                             </div>
 
-                            <div className="mt-4 w-full rounded-xl bg-slate-50 p-3 text-sm">
-                                <div className="font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
+                            <div className="mt-4 w-full rounded-xl bg-slate-50 dark:bg-slate-800/50 p-3 text-sm">
+                                <div className="font-semibold text-slate-700 dark:text-slate-200 mb-1 flex items-center gap-1.5">
                                     <AlertCircle size={14} className="text-amber-500" />
                                     Known Struggles
                                 </div>
-                                <p className="text-slate-600 line-clamp-2">{student.struggles}</p>
+                                <p className="text-slate-600 dark:text-slate-400 line-clamp-2">{student.struggles}</p>
                             </div>
                         </div>
                     ))}
@@ -226,26 +226,26 @@ export default function StudentsPage() {
             {/* Slide-over Drawer Overlay */}
             {isDrawerOpen && (
                 <div
-                    className="fixed inset-0 z-50 bg-slate-900/20 backdrop-blur-sm transition-opacity"
+                    className="fixed inset-0 z-50 bg-slate-900/20 dark:bg-slate-900/80 backdrop-blur-sm transition-opacity"
                     onClick={closeDrawer}
                 />
             )}
 
             {/* Slide-over Drawer Panel */}
             <div
-                className={`fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col bg-white shadow-2xl transition-transform duration-300 ease-in-out ${isDrawerOpen ? 'translate-x-0' : 'translate-x-full'
+                className={`fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col bg-white dark:bg-slate-900 shadow-2xl dark:shadow-slate-900/50 border-l border-transparent dark:border-slate-800/50 transition-transform duration-300 ease-in-out ${isDrawerOpen ? 'translate-x-0' : 'translate-x-full'
                     }`}
             >
-                <div className="flex items-center justify-between border-b border-slate-100 p-6">
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 p-6">
                     <div className="flex items-center gap-2">
-                        <Sparkles className="text-indigo-500" size={20} />
-                        <h2 className="text-xl font-bold text-slate-900">
+                        <Sparkles className="text-indigo-500 dark:text-indigo-400" size={20} />
+                        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
                             Generate Persona
                         </h2>
                     </div>
                     <button
                         onClick={closeDrawer}
-                        className="rounded-full p-2 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
+                        className="rounded-full p-2 text-slate-400 dark:text-slate-500 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300"
                     >
                         <X size={20} />
                     </button>
@@ -257,29 +257,29 @@ export default function StudentsPage() {
                         {/* Basic Info */}
                         <div className="grid grid-cols-4 gap-4">
                             <div className="col-span-3">
-                                <label className="mb-1.5 block text-sm font-semibold text-slate-900">Student Name *</label>
+                                <label className="mb-1.5 block text-sm font-semibold text-slate-900 dark:text-slate-200">Student Name *</label>
                                 <input
                                     type="text"
                                     value={newName}
                                     onChange={(e) => setNewName(e.target.value)}
                                     placeholder="e.g. Liam"
-                                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 outline-none transition-all placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent dark:bg-slate-900/50 dark:text-slate-100 px-4 py-2.5 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 dark:focus:ring-indigo-500/20"
                                 />
                             </div>
                             <div className="col-span-1">
-                                <label className="mb-1.5 block text-sm font-semibold text-slate-900">Emoji *</label>
+                                <label className="mb-1.5 block text-sm font-semibold text-slate-900 dark:text-slate-200">Emoji *</label>
                                 <input
                                     type="text"
                                     value={newEmoji}
                                     onChange={(e) => setNewEmoji(e.target.value)}
-                                    className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-center text-xl outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent dark:bg-slate-900/50 dark:text-slate-100 px-4 py-2.5 text-center text-xl outline-none transition-all focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 dark:focus:ring-indigo-500/20"
                                 />
                             </div>
                         </div>
 
                         {/* Age Field */}
                         <div>
-                            <label className="mb-1.5 block text-sm font-semibold text-slate-900">Age *</label>
+                            <label className="mb-1.5 block text-sm font-semibold text-slate-900 dark:text-slate-200">Age *</label>
                             <input
                                 type="number"
                                 value={newAge}
@@ -293,9 +293,9 @@ export default function StudentsPage() {
                                     }
                                 }}
                                 placeholder="Age (6-18)"
-                                className={`w-full rounded-xl border px-4 py-2.5 outline-none transition-all focus:ring-2 ${ageError
+                                className={`w-full rounded-xl border bg-transparent dark:bg-slate-900/50 dark:text-slate-100 px-4 py-2.5 outline-none transition-all focus:ring-2 ${ageError
                                     ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20'
-                                    : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/20'
+                                    : 'border-slate-200 dark:border-slate-700 focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-indigo-500/20 dark:focus:ring-indigo-500/20'
                                     }`}
                             />
                             {ageError && (
@@ -306,25 +306,25 @@ export default function StudentsPage() {
                         </div>
 
                         {/* Personality Sliders */}
-                        <div className="space-y-6 rounded-2xl border border-indigo-50 bg-indigo-50/30 p-5">
+                        <div className="space-y-6 rounded-2xl border border-indigo-50 dark:border-indigo-900/30 bg-indigo-50/30 dark:bg-indigo-900/10 p-5">
                             <div>
-                                <h3 className="text-sm font-bold text-indigo-900 mb-1">Personality Configuration</h3>
-                                <p className="text-xs text-slate-500 mb-4">Adjust the sliders to shape the AI agent's behavior during class simulations.</p>
+                                <h3 className="text-sm font-bold text-indigo-900 dark:text-indigo-300 mb-1">Personality Configuration</h3>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Adjust the sliders to shape the AI agent's behavior during class simulations.</p>
                             </div>
 
                             {/* Activity Level */}
                             <div className="space-y-3">
                                 <div className="flex justify-between text-xs font-semibold">
-                                    <span className="text-slate-500">Passive</span>
-                                    <span className="text-indigo-600">Activity Level</span>
-                                    <span className="text-slate-500">Hyperactive</span>
+                                    <span className="text-slate-500 dark:text-slate-400">Passive</span>
+                                    <span className="text-indigo-600 dark:text-indigo-400">Activity Level</span>
+                                    <span className="text-slate-500 dark:text-slate-400">Hyperactive</span>
                                 </div>
                                 <input
                                     type="range"
                                     min="0" max="100"
                                     value={activityLevel}
                                     onChange={(e) => setActivityLevel(parseInt(e.target.value))}
-                                    className="w-full appearance-none h-2 bg-slate-200 rounded-full outline-none accent-indigo-600 focus:ring-2 focus:ring-indigo-500/20"
+                                    className="w-full appearance-none h-2 bg-slate-200 dark:bg-slate-700 rounded-full outline-none accent-indigo-600 dark:accent-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
                                 />
                             </div>
 
@@ -332,7 +332,7 @@ export default function StudentsPage() {
                             <div className="space-y-3">
                                 <div className="flex justify-between text-xs font-semibold">
                                     <span className="text-emerald-500">Peaceful</span>
-                                    <span className="text-indigo-600">Conflict Level</span>
+                                    <span className="text-indigo-600 dark:text-indigo-400">Conflict Level</span>
                                     <span className="text-rose-500">Chaotic</span>
                                 </div>
                                 <input
@@ -340,7 +340,7 @@ export default function StudentsPage() {
                                     min="0" max="100"
                                     value={conflictLevel}
                                     onChange={(e) => setConflictLevel(parseInt(e.target.value))}
-                                    className="w-full appearance-none h-2 bg-slate-200 rounded-full outline-none accent-indigo-600 focus:ring-2 focus:ring-indigo-500/20"
+                                    className="w-full appearance-none h-2 bg-slate-200 dark:bg-slate-700 rounded-full outline-none accent-indigo-600 dark:accent-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
                                 />
                             </div>
 
@@ -348,7 +348,7 @@ export default function StudentsPage() {
                             <div className="space-y-3">
                                 <div className="flex justify-between text-xs font-semibold">
                                     <span className="text-amber-500">Easily Distracted</span>
-                                    <span className="text-indigo-600">Attention Span</span>
+                                    <span className="text-indigo-600 dark:text-indigo-400">Attention Span</span>
                                     <span className="text-blue-500">Laser Focus</span>
                                 </div>
                                 <input
@@ -356,19 +356,19 @@ export default function StudentsPage() {
                                     min="0" max="100"
                                     value={attentionSpan}
                                     onChange={(e) => setAttentionSpan(parseInt(e.target.value))}
-                                    className="w-full appearance-none h-2 bg-slate-200 rounded-full outline-none accent-indigo-600 focus:ring-2 focus:ring-indigo-500/20"
+                                    className="w-full appearance-none h-2 bg-slate-200 dark:bg-slate-700 rounded-full outline-none accent-indigo-600 dark:accent-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
                                 />
                             </div>
                         </div>
 
                         {/* Personality (Free Text) */}
                         <div>
-                            <label className="mb-1.5 block text-sm font-semibold text-slate-900">Student Personality</label>
+                            <label className="mb-1.5 block text-sm font-semibold text-slate-900 dark:text-slate-200">Student Personality</label>
                             <textarea
                                 value={newPersonality}
                                 onChange={(e) => setNewPersonality(e.target.value)}
                                 placeholder="Describe the student's background, quirks, and behavior..."
-                                className="w-full h-24 resize-none rounded-xl border border-slate-200 px-4 py-2.5 outline-none transition-all placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                                className="w-full h-24 resize-none rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent dark:bg-slate-900/50 dark:text-slate-100 px-4 py-2.5 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 dark:focus:ring-indigo-500/20"
                             />
                         </div>
 
@@ -376,17 +376,17 @@ export default function StudentsPage() {
                 </div>
 
                 {/* Footer Actions */}
-                <div className="border-t border-slate-100 p-6 bg-slate-50 mt-auto">
+                <div className="border-t border-slate-100 dark:border-slate-800 p-6 bg-slate-50 dark:bg-slate-900 mt-auto">
                     <button
                         type="submit"
                         form="generate-student-form"
                         disabled={isGenerating}
-                        className="flex w-full justify-center items-center gap-2 rounded-xl bg-indigo-500 py-3 font-semibold text-white shadow-sm transition-all hover:bg-indigo-600 hover:shadow-md active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
+                        className="flex w-full justify-center items-center gap-2 rounded-xl bg-indigo-500 dark:bg-indigo-600 py-3 font-semibold text-white shadow-sm transition-all hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:shadow-md active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
                     >
                         <Sparkles size={18} />
                         {isGenerating ? 'Saving...' : 'Generate AI Persona'}
                     </button>
-                    <p className="mt-3 text-center text-xs text-slate-400">
+                    <p className="mt-3 text-center text-xs text-slate-400 dark:text-slate-500">
                         This immediately creates a prompt context for the LLM.
                     </p>
                 </div>

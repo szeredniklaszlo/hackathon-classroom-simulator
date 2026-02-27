@@ -37,32 +37,32 @@ export default function Dashboard() {
         <div className="mx-auto max-w-5xl space-y-8 animate-in fade-in zoom-in-95 duration-500">
             {/* Header */}
             <div>
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900">Good morning, {userName} 👋</h1>
-                <p className="mt-1 text-slate-500">Ready to challenge your teaching skills today?</p>
+                <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Good morning, {userName} 👋</h1>
+                <p className="mt-1 text-slate-500 dark:text-slate-400">Ready to challenge your teaching skills today?</p>
             </div>
 
             {/* Quick Actions Grid */}
             <div className="grid gap-4 sm:grid-cols-2">
-                <Link href="/classes" className="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100 transition-all hover:shadow-md hover:ring-primary/20">
+                <Link href="/classes" className="group relative overflow-hidden rounded-2xl bg-white dark:bg-slate-800/80 p-6 shadow-sm ring-1 ring-slate-100 dark:ring-slate-700/50 transition-all hover:shadow-md hover:ring-primary/20 dark:hover:ring-sky-500/30">
                     <div className="flex items-center gap-4">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-primary transition-transform group-hover:scale-110">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 dark:bg-sky-900/30 text-primary dark:text-sky-400 transition-transform group-hover:scale-110">
                             <PlusCircle size={24} />
                         </div>
                         <div>
-                            <h3 className="font-semibold text-slate-900">Create New Class</h3>
-                            <p className="text-sm text-slate-500">Organize a new cohort</p>
+                            <h3 className="font-semibold text-slate-900 dark:text-slate-100">Create New Class</h3>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">Organize a new cohort</p>
                         </div>
                     </div>
                 </Link>
 
-                <Link href="/students" className="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100 transition-all hover:shadow-md hover:ring-primary/20">
+                <Link href="/students" className="group relative overflow-hidden rounded-2xl bg-white dark:bg-slate-800/80 p-6 shadow-sm ring-1 ring-slate-100 dark:ring-slate-700/50 transition-all hover:shadow-md hover:ring-primary/20 dark:hover:ring-sky-500/30">
                     <div className="flex items-center gap-4">
-                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-500 transition-transform group-hover:scale-110">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 transition-transform group-hover:scale-110">
                             <UserPlus size={24} />
                         </div>
                         <div>
-                            <h3 className="font-semibold text-slate-900">Generate Student</h3>
-                            <p className="text-sm text-slate-500">Design an AI persona</p>
+                            <h3 className="font-semibold text-slate-900 dark:text-slate-100">Generate Student</h3>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">Design an AI persona</p>
                         </div>
                     </div>
                 </Link>
@@ -70,13 +70,13 @@ export default function Dashboard() {
 
             <div className="grid gap-8 lg:grid-cols-3">
                 {/* Chart Section */}
-                <div className="lg:col-span-2 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100">
+                <div className="lg:col-span-2 rounded-2xl bg-white dark:bg-slate-800/80 p-6 shadow-sm ring-1 ring-slate-100 dark:ring-slate-700/50">
                     <div className="mb-6 flex items-center justify-between">
                         <div>
-                            <h2 className="text-lg font-bold text-slate-900">Overall Progress</h2>
-                            <p className="text-sm text-slate-500">Average student engagement over time</p>
+                            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Overall Progress</h2>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">Average student engagement over time</p>
                         </div>
-                        <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-1 text-sm font-medium text-emerald-600">
+                        <div className="flex items-center gap-2 rounded-lg bg-emerald-50 dark:bg-emerald-900/30 px-3 py-1 text-sm font-medium text-emerald-600 dark:text-emerald-400">
                             <TrendingUp size={16} />
                             +12%
                         </div>
@@ -123,25 +123,25 @@ export default function Dashboard() {
                 </div>
 
                 {/* Recent Classes List */}
-                <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100">
+                <div className="rounded-2xl bg-white dark:bg-slate-800/80 p-6 shadow-sm ring-1 ring-slate-100 dark:ring-slate-700/50">
                     <div className="mb-6 flex items-center justify-between">
-                        <h2 className="text-lg font-bold text-slate-900">Recent Sessions</h2>
-                        <Link href="/classes" className="text-sm font-medium text-primary hover:underline">
+                        <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Recent Sessions</h2>
+                        <Link href="/classes" className="text-sm font-medium text-primary dark:text-sky-400 hover:underline">
                             View all
                         </Link>
                     </div>
 
                     <div className="space-y-4">
                         {recentClasses.map((vClass) => (
-                            <div key={vClass.id} className="group relative flex items-center gap-4 rounded-xl border border-slate-100 p-3 transition-colors hover:bg-slate-50">
-                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-2xl">
+                            <div key={vClass.id} className="group relative flex items-center gap-4 rounded-xl border border-slate-100 dark:border-slate-700/50 p-3 transition-colors hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-700/50 text-2xl">
                                     {vClass.emoji}
                                 </div>
                                 <div className="flex-1 overflow-hidden">
-                                    <h4 className="truncate font-semibold text-slate-900" title={vClass.name}>{vClass.name}</h4>
-                                    <p className="truncate text-xs text-slate-500" title={vClass.subject}>{vClass.subject}</p>
+                                    <h4 className="truncate font-semibold text-slate-900 dark:text-slate-100" title={vClass.name}>{vClass.name}</h4>
+                                    <p className="truncate text-xs text-slate-500 dark:text-slate-400" title={vClass.subject}>{vClass.subject}</p>
                                 </div>
-                                <Link href={`/class/${vClass.id}`} className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary opacity-0 transition-all group-hover:opacity-100 hover:bg-primary hover:text-white">
+                                <Link href={`/class/${vClass.id}`} className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 dark:bg-sky-900/40 text-primary dark:text-sky-400 opacity-0 transition-all group-hover:opacity-100 hover:bg-primary dark:hover:bg-primary hover:text-white dark:hover:text-white">
                                     <PlayCircle size={18} />
                                     <span className="sr-only">Start</span>
                                 </Link>
@@ -149,10 +149,10 @@ export default function Dashboard() {
                         ))}
                     </div>
 
-                    <div className="mt-6 rounded-xl bg-blue-50 p-4 border border-blue-100">
+                    <div className="mt-6 rounded-xl bg-blue-50 dark:bg-sky-900/20 p-4 border border-blue-100 dark:border-sky-800/50">
                         <div className="flex items-start gap-3">
-                            <BrainCircuit className="mt-0.5 text-primary shrink-0" size={18} />
-                            <p className="text-xs text-blue-800 font-medium">
+                            <BrainCircuit className="mt-0.5 text-primary dark:text-sky-400 shrink-0" size={18} />
+                            <p className="text-xs text-blue-800 dark:text-sky-300 font-medium">
                                 AI Coach Tip: Your ability to handle disruptions improved by 12% this week! Consider trying the "Class Clown" persona to test your skills further.
                             </p>
                         </div>
