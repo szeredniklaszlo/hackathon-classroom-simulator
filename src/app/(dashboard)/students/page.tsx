@@ -362,9 +362,9 @@ export default function StudentsPage() {
             >
                 <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 p-6">
                     <div className="flex items-center gap-2">
-                        <Sparkles className="text-indigo-500 dark:text-indigo-400" size={20} />
+                        <UserPlus className="text-secondary dark:text-sky-400" size={20} />
                         <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                            Generate Persona
+                            Create New Persona
                         </h2>
                     </div>
                     <button
