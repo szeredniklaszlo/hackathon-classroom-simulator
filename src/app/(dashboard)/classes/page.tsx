@@ -1,13 +1,42 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { VirtualClass, Student } from '@/types/shared';
-import { Users, Plus, X, BookOpen, Clock, Activity, Search, PlayCircle } from 'lucide-react';
+import { Users, Plus, X, BookOpen, Clock, Activity, Search, PlayCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ClassesPage() {
-    const { classes, students, addClass } = useStore();
+    const { classes, students, addClass, setClasses, setStudents } = useStore();
+    const [isLoading, setIsLoading] = useState(true);
+
+    // Fetch classes and students on mount
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const [classesRes, studentsRes] = await Promise.all([
+                    fetch('/api/classes'),
+                    fetch('/api/students')
+                ]);
+
+                if (classesRes.ok) {
+                    const data = await classesRes.json();
+                    setClasses(data.classes);
+                }
+                if (studentsRes.ok) {
+                    const data = await studentsRes.json();
+                    setStudents(data.students);
+                }
+            } catch (error) {
+                console.error("Error fetching data:", error);
+                toast.error('Hiba történt az adatok betöltésekor.');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchData();
+    }, [setClasses, setStudents]);
 
     // Drawer State
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -48,26 +77,48 @@ export default function ClassesPage() {
         setSelectedStudentIds(next);
     };
 
-    const handleCreateClass = (e: React.FormEvent) => {
+    const [isGenerating, setIsGenerating] = useState(false);
+
+    const handleCreateClass = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!newName || !newSubject) return;
 
+        setIsGenerating(true);
         const classStudents = students.filter(s => selectedStudentIds.has(s.id));
 
-        const newClass: VirtualClass = {
-            id: `c_${Date.now()}`,
-            name: newName,
-            subject: newSubject,
-            emoji: newEmoji,
-            description: 'Custom created class.',
-            students: classStudents,
-        };
+        try {
+            const response = await fetch('/api/classes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: newName,
+                    subject: newSubject,
+                    emoji: newEmoji,
+                    description: 'Custom created class.',
+                    students: classStudents,
+                })
+            });
 
-        addClass(newClass);
-        toast.success('Osztály sikeresen mentve!', {
-            description: `${newName} added to your active cohorts.`,
-        });
-        closeDrawer();
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to create class');
+            }
+
+            const { virtualClass: newClass } = await response.json();
+
+            addClass(newClass);
+            toast.success('Osztály sikeresen mentve!', {
+                description: `${newName} added to your active cohorts.`,
+            });
+            closeDrawer();
+        } catch (error: any) {
+            console.error("Failed to save class:", error);
+            toast.error('Hiba történt a mentés során.', {
+                description: error.message,
+            });
+        } finally {
+            setIsGenerating(false);
+        }
     };
 
     return (
@@ -75,7 +126,7 @@ export default function ClassesPage() {
             {/* Header */}
             <div className="mb-8 flex items-end justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Cohorts</h1>
+                    <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Virtual Classrooms</h1>
                     <p className="mt-1 text-slate-500 dark:text-slate-400">Manage your active classes and simulation environments.</p>
                 </div>
                 <button
@@ -88,31 +139,42 @@ export default function ClassesPage() {
             </div>
 
             {/* Grid */}
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {classes.map((vClass) => (
-                    <button
-                        key={vClass.id}
-                        onClick={() => openViewDrawer(vClass)}
-                        className="group relative flex flex-col items-start overflow-hidden rounded-2xl bg-white dark:bg-slate-800/80 p-6 text-left shadow-sm ring-1 ring-slate-100 dark:ring-slate-700/50 transition-all hover:-translate-y-1 hover:shadow-md hover:ring-primary/20 dark:hover:ring-sky-500/30"
-                    >
-                        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 dark:bg-sky-900/30 text-4xl shadow-sm transition-transform group-hover:scale-105">
-                            {vClass.emoji}
-                        </div>
-                        <h3 className="mb-1 text-lg font-bold text-slate-900 dark:text-slate-100">{vClass.name}</h3>
-                        <div className="mb-4 flex items-center gap-1.5 text-sm font-medium text-slate-500 dark:text-slate-400">
-                            <BookOpen size={14} className="text-primary dark:text-sky-400" />
-                            {vClass.subject}
-                        </div>
-
-                        <div className="mt-auto flex w-full items-center justify-between border-t border-slate-50 dark:border-slate-700/50 pt-4">
-                            <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                                <Users size={16} className="text-slate-400 dark:text-slate-500" />
-                                <span className="font-semibold text-slate-900 dark:text-slate-200">{vClass.students.length}</span> Students
+            {isLoading ? (
+                <div className="flex h-64 items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary dark:text-sky-400" />
+                </div>
+            ) : classes.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-64 text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-100 dark:border-slate-700/50 border-dashed">
+                    <BookOpen className="h-12 w-12 text-slate-300 dark:text-slate-600 mb-3" />
+                    <p>No classes created yet.</p>
+                </div>
+            ) : (
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                    {classes.map((vClass) => (
+                        <button
+                            key={vClass.id}
+                            onClick={() => openViewDrawer(vClass)}
+                            className="group relative flex flex-col items-start overflow-hidden rounded-2xl bg-white dark:bg-slate-800/80 p-6 text-left shadow-sm ring-1 ring-slate-100 dark:ring-slate-700/50 transition-all hover:-translate-y-1 hover:shadow-md hover:ring-primary/20 dark:hover:ring-sky-500/30"
+                        >
+                            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 dark:bg-sky-900/30 text-4xl shadow-sm transition-transform group-hover:scale-105">
+                                {vClass.emoji}
                             </div>
-                        </div>
-                    </button>
-                ))}
-            </div>
+                            <h3 className="mb-1 text-lg font-bold text-slate-900 dark:text-slate-100">{vClass.name}</h3>
+                            <div className="mb-4 flex items-center gap-1.5 text-sm font-medium text-slate-500 dark:text-slate-400">
+                                <BookOpen size={14} className="text-primary dark:text-sky-400" />
+                                {vClass.subject}
+                            </div>
+
+                            <div className="mt-auto flex w-full items-center justify-between border-t border-slate-50 dark:border-slate-700/50 pt-4">
+                                <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                                    <Users size={16} className="text-slate-400 dark:text-slate-500" />
+                                    <span className="font-semibold text-slate-900 dark:text-slate-200">{vClass.students?.length || 0}</span> Students
+                                </div>
+                            </div>
+                        </button>
+                    ))}
+                </div>
+            )}
 
             {/* Slide-over Drawer Overlay */}
             {isDrawerOpen && (
@@ -167,9 +229,9 @@ export default function ClassesPage() {
                             </div>
 
                             <div>
-                                <h4 className="mb-3 font-bold text-slate-900 dark:text-slate-100">Roster ({selectedClass.students.length})</h4>
+                                <h4 className="mb-3 font-bold text-slate-900 dark:text-slate-100">Roster ({selectedClass.students?.length || 0})</h4>
                                 <div className="space-y-2">
-                                    {selectedClass.students.map(student => (
+                                    {(selectedClass.students || []).map(student => (
                                         <div key={student.id} className="flex items-center gap-3 rounded-lg border border-slate-100 dark:border-slate-800 p-2">
                                             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 text-xl">
                                                 {student.emoji}
@@ -249,14 +311,9 @@ export default function ClassesPage() {
                                                 className={`flex w-full items-center justify-between rounded-lg p-3 transition-colors ${isSelected ? 'bg-blue-50/50 dark:bg-sky-900/30 ring-1 ring-primary/30 dark:ring-sky-500/30' : 'hover:bg-slate-50 dark:hover:bg-slate-800/80'
                                                     }`}
                                             >
-                                                <div className="flex items-center gap-3">
-                                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 text-xl">
-                                                        {student.emoji}
-                                                    </div>
-                                                    <div className="text-left">
-                                                        <div className="font-semibold text-slate-900 dark:text-slate-100">{student.name}</div>
-                                                        <div className="text-xs text-slate-500 dark:text-slate-400">{student.type}</div>
-                                                    </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xl">{student.emoji}</span>
+                                                    <span className="font-semibold text-slate-900 dark:text-slate-100">{student.name}</span>
                                                 </div>
                                                 <div className={`flex h-5 w-5 items-center justify-center rounded border ${isSelected ? 'border-primary dark:border-sky-500 bg-primary dark:bg-sky-500 text-white' : 'border-slate-300 dark:border-slate-600'
                                                     }`}>
@@ -277,9 +334,10 @@ export default function ClassesPage() {
                         <button
                             type="submit"
                             form="create-class-form"
-                            className="w-full rounded-xl bg-primary py-3 font-semibold text-white shadow-sm transition-all hover:bg-primary/90 hover:shadow-md active:scale-[0.98]"
+                            disabled={isGenerating}
+                            className="w-full rounded-xl bg-primary py-3 font-semibold text-white shadow-sm transition-all hover:bg-primary/90 hover:shadow-md active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center gap-2"
                         >
-                            Save Class
+                            {isGenerating ? <><Loader2 size={18} className="animate-spin" /> Saving...</> : 'Save Class'}
                         </button>
                     ) : (
                         <a

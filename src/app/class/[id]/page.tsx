@@ -3,8 +3,8 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { mockClasses, mockStudents } from '@/lib/mockData';
 import { Student } from '@/types/shared';
+import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
 import { Play, Square, Save, UserPlus, Hand, ArrowLeft, Clock, Mic, MicOff } from 'lucide-react';
 import Link from 'next/link';
@@ -16,10 +16,20 @@ export default function VirtualClassroom() {
     const router = useRouter();
     const classId = params.id as string;
 
-    // Find initial class or fallback
-    const initialClass = mockClasses.find(c => c.id === classId) || mockClasses[0];
+    const { classes, students: globalStudents } = useStore();
 
-    const [students, setStudents] = useState<Student[]>(initialClass.students);
+    // Find initial class or fallback
+    const initialClass = classes.find(c => c.id === classId);
+
+    // If classes are not loaded yet or invalid ID, show loading or redirect
+    useEffect(() => {
+        if (classes.length > 0 && !initialClass) {
+            toast.error("Class not found.");
+            router.push('/dashboard');
+        }
+    }, [classes, initialClass, router]);
+
+    const [students, setStudents] = useState<Student[]>(initialClass?.students || []);
     const [isPlaying, setIsPlaying] = useState(false);
     const [seconds, setSeconds] = useState(0);
 
@@ -150,16 +160,18 @@ export default function VirtualClassroom() {
 
     const handleAddStudent = () => {
         // Pick a random student not already in the class (or just generate a clone if all are added)
-        const available = mockStudents.filter(s => !students.find(cs => cs.id === s.id));
+        const available = globalStudents.filter(s => !students.find(cs => cs.id === s.id));
         if (available.length > 0) {
             const newStudent = available[Math.floor(Math.random() * available.length)];
             setStudents([...students, newStudent]);
-            toast.success(`Added ${newStudent.name} to the classroom.`);
-        } else {
+            toast.success(`Hazádtuk a fiktív diákot: ${newStudent.name}`);
+        } else if (globalStudents.length > 0) {
             // Just clone one for demo purposes
-            const clone = { ...mockStudents[Math.floor(Math.random() * mockStudents.length)], id: `s${Date.now()}` };
+            const clone = { ...globalStudents[Math.floor(Math.random() * globalStudents.length)], id: `s${Date.now()}` };
             setStudents([...students, clone]);
-            toast.success(`Generated new student: ${clone.name} (Clone)`);
+            toast.success(`Hozzáadtunk egy klónozott diákot: ${clone.name}`);
+        } else {
+            toast.error("Nincs elég diák az adatbázisban.");
         }
     };
 
@@ -180,6 +192,14 @@ export default function VirtualClassroom() {
         if (score < 70) return "bg-amber-50 dark:bg-amber-900/20";
         return "bg-green-50 dark:bg-green-900/20";
     };
+
+    if (!initialClass) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC] dark:bg-slate-950 text-slate-500">
+                <div className="animate-pulse">Loading simulation...</div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-950 flex flex-col">
