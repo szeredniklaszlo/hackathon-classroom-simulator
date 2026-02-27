@@ -321,14 +321,6 @@ export default function VirtualClassroom() {
                             Live: {formatTime(seconds)}
                         </div>
                     )}
-                    <button onClick={handleSaveRoster} className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-primary dark:hover:text-indigo-400 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 px-3 py-2 rounded-lg text-sm font-semibold border border-transparent hover:border-slate-200 dark:hover:border-slate-700">
-                        <Save size={18} />
-                        <span className="hidden sm:inline">Save Roster</span>
-                    </button>
-                    <button onClick={handleAddStudent} className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors px-3 py-2 rounded-lg text-sm font-semibold">
-                        <UserPlus size={18} />
-                        <span className="hidden sm:inline">Add Student</span>
-                    </button>
                 </div>
             </header>
 
@@ -386,7 +378,7 @@ export default function VirtualClassroom() {
                                 >
                                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl border ${getMoodColor(student.moodScore)} overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0`}>
                                         <img
-                                            src={`https://wsrv.nl/?url=${encodeURIComponent(`avatar.iran.liara.run/public/${guessGender(student.name)}?username=` + student.name + '_' + student.age)}`}
+                                            src={`https://api.dicebear.com/9.x/${guessGender(student.name) === 'girl' ? 'lorelei' : 'adventurer'}/svg?seed=${encodeURIComponent(student.name + '_' + student.age)}&mouth=neutral`}
                                             alt={`${student.name} avatar`}
                                             className="w-full h-full object-cover"
                                         />
