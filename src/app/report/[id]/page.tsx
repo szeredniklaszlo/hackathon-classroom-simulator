@@ -5,11 +5,12 @@ import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { mockTranscript, mockAIFeedback, mockClasses } from '@/lib/mockData';
 import { toast } from 'sonner';
-import { Download, Save, CheckCircle2, AlertCircle, Lightbulb, ArrowLeft, PenLine } from 'lucide-react';
+import { Download, Save, CheckCircle2, AlertCircle, Lightbulb, ArrowLeft, PenLine, RefreshCcw } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
+import { TranscriptEntry } from '@/types/shared';
 
 export default function VirtualDiary() {
     const params = useParams();
@@ -22,6 +23,8 @@ export default function VirtualDiary() {
     const [isExporting, setIsExporting] = useState(false);
     const [isGuest, setIsGuest] = useState(true); // default: treat as guest until resolved
     const [authChecked, setAuthChecked] = useState(false);
+    const [transcript, setTranscript] = useState<TranscriptEntry[]>(mockTranscript);
+    const [isLoadingTranscript, setIsLoadingTranscript] = useState(false);
 
     // Check Supabase auth state on mount
     useEffect(() => {
@@ -53,6 +56,29 @@ export default function VirtualDiary() {
         setTimeout(() => {
             router.push('/dashboard');
         }, 1500);
+    };
+
+    const handleLoadLiveTranscript = async () => {
+        setIsLoadingTranscript(true);
+        try {
+            const res = await fetch(`/api/transcripts?classId=${classId}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.transcript && data.transcript.length > 0) {
+                    setTranscript(data.transcript);
+                    toast.success("Live transcript loaded successfully!");
+                } else {
+                    toast.info("No live transcript found for this session.", { description: "Showing mock data instead." });
+                }
+            } else {
+                toast.error("Failed to load live transcript.");
+            }
+        } catch (e) {
+            console.error(e);
+            toast.error("Connection error while loading transcript.");
+        } finally {
+            setIsLoadingTranscript(false);
+        }
     };
 
     const exportPDF = async () => {
@@ -292,9 +318,19 @@ export default function VirtualDiary() {
 
                     {/* Transcript Section */}
                     <div>
-                        <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-6 pt-6 border-t border-slate-100 dark:border-slate-800">Class Transcript</h3>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pt-6 border-t border-slate-100 dark:border-slate-800">
+                            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">Class Transcript</h3>
+                            <button
+                                onClick={handleLoadLiveTranscript}
+                                disabled={isLoadingTranscript}
+                                className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 border border-indigo-100 dark:border-indigo-800 rounded-lg text-sm font-bold transition-colors disabled:opacity-50"
+                            >
+                                <RefreshCcw size={16} className={isLoadingTranscript ? 'animate-spin' : ''} />
+                                {isLoadingTranscript ? 'Loading...' : 'Load Live Transcript'}
+                            </button>
+                        </div>
                         <div className="space-y-4">
-                            {mockTranscript.map((entry, idx) => (
+                            {transcript.length > 0 ? transcript.map((entry, idx) => (
                                 <motion.div
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
@@ -326,7 +362,9 @@ export default function VirtualDiary() {
                                         </span>
                                     )}
                                 </motion.div>
-                            ))}
+                            )) : (
+                                <p className="text-slate-500 dark:text-slate-400 italic text-center py-8">No conversation recorded during this class.</p>
+                            )}
                         </div>
                     </div>
 

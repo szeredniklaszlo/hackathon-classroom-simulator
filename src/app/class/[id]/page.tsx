@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { mockClasses, mockStudents } from '@/lib/mockData';
-import { Student } from '@/types/shared';
+import { Student, TranscriptEntry } from '@/types/shared';
 import { toast } from 'sonner';
 import { Play, Square, Save, UserPlus, Hand, ArrowLeft, Clock, Mic, MicOff } from 'lucide-react';
 import Link from 'next/link';
@@ -21,6 +21,7 @@ export default function VirtualClassroom() {
     const [students, setStudents] = useState<Student[]>(initialClass.students);
     const [isPlaying, setIsPlaying] = useState(false);
     const [seconds, setSeconds] = useState(0);
+    const [liveTranscript, setLiveTranscript] = useState<TranscriptEntry[]>([]);
 
     // Azure STT Hook
     const { isListening, startListening, stopListening, fullTranscript, stableBuffer, setStableBuffer } = useAzureSTT({ language: 'en-US' });
@@ -68,10 +69,20 @@ export default function VirtualClassroom() {
                 if (response.ok) {
                     const data = await response.json();
                     if (data.isProcessed) {
-                        // Replace the processed part of the buffer with the remaining
                         setStableBuffer(data.remainingBuffer);
-                        // Make sure we won't get stuck ignoring the new buffer
                         lastBufferRef.current = '';
+
+                        const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        const newEntries: TranscriptEntry[] = [];
+
+                        if (data.extractedContext) {
+                            newEntries.push({
+                                id: `t-${Date.now()}`,
+                                speaker: 'Teacher',
+                                text: data.extractedContext,
+                                timestamp,
+                            });
+                        }
 
                         // Update students based on orchestrator response
                         if (data.responses && data.responses.length > 0) {
@@ -85,6 +96,14 @@ export default function VirtualClassroom() {
                                             moodScore: res.newEngagement,
                                         };
                                         if (res.spoke && res.message) {
+                                            newEntries.push({
+                                                id: `s-${res.studentId}-${Date.now()}`,
+                                                speaker: updated[idx].name,
+                                                text: res.message,
+                                                timestamp,
+                                                // rudimentary emotion inference from score
+                                                emotion: res.newEngagement > 70 ? 'happy' : res.newEngagement < 40 ? 'confused' : 'neutral'
+                                            });
                                             toast(`${updated[idx].name} says:`, { description: res.message, duration: 4000 });
                                         }
                                     }
@@ -92,6 +111,11 @@ export default function VirtualClassroom() {
                                 return updated;
                             });
                         }
+
+                        if (newEntries.length > 0) {
+                            setLiveTranscript(prev => [...prev, ...newEntries]);
+                        }
+
                     } else if (data.remainingBuffer !== undefined) {
                         // Not enough context yet. Buffer stays the same or grows pending next STT update.
                     }
@@ -117,6 +141,19 @@ export default function VirtualClassroom() {
     const handleTogglePlay = () => {
         if (isPlaying) {
             stopListening();
+
+            console.log("\n=== 📝 SIMULATION ENDED. FULL TRANSCRIPT ===");
+            console.table(liveTranscript.map(t => ({ Time: t.timestamp, Speaker: t.speaker, Text: t.text })));
+            console.log("Raw object:", JSON.stringify(liveTranscript, null, 2));
+            console.log("================================================\n");
+
+            // Save to file via API
+            fetch('/api/transcripts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ classId, transcript: liveTranscript })
+            }).catch(e => console.error("Failed to save transcript", e));
+
             // Stopping the simulation redirects to the diary/report
             toast.success("Simulation Ended", { description: "Preparing virtual diary..." });
             setTimeout(() => {
@@ -124,6 +161,7 @@ export default function VirtualClassroom() {
             }, 800);
         } else {
             setIsPlaying(true);
+            setLiveTranscript([]); // Reset
             startListening();
             toast.info("Simulation Started", { description: "The virtual class has begun. Microphone active." });
         }
