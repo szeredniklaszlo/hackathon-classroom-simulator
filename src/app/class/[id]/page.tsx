@@ -116,13 +116,25 @@ export default function VirtualClassroom() {
             lastBufferRef.current = stableBuffer;
 
             try {
+                // Mivel a diákok a class object-ben egy snapshot-ként lehetnek lementve (amiben esetleg nincs benne az utólag generált prompt),
+                // ezért frissítsük be a globális students listából a promptokat.
+                const updatedStudentsForOrchestrator = students.map(s => {
+                    const baseId = s.id.split('-')[0]; // Ha "uuid-1" formátumú a duplikált diák
+                    const baseStudent = globalStudents.find(g => g.id === baseId || g.id === s.id);
+                    return {
+                        ...s,
+                        prompt: baseStudent?.prompt || s.prompt
+                    };
+                });
+
                 const response = await fetch('/api/orchestrator', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         sessionId: classId,
-                        students,
-                        teacherTranscriptChunk: stableBuffer
+                        students: updatedStudentsForOrchestrator,
+                        teacherTranscriptChunk: stableBuffer,
+                        fullTranscript: liveTranscript
                     })
                 });
 
