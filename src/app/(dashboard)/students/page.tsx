@@ -202,9 +202,6 @@ export default function StudentsPage() {
                                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 dark:bg-slate-700/50 text-2xl shadow-sm">
                                     {student.emoji}
                                 </div>
-                                <span className="inline-flex items-center rounded-full bg-blue-50 dark:bg-sky-900/30 px-2.5 py-0.5 text-xs font-semibold text-blue-700 dark:text-sky-300">
-                                    {student.type}
-                                </span>
                             </div>
                             <div className="mt-4">
                                 <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">{student.name}</h3>
