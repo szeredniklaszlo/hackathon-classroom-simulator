@@ -1,5 +1,6 @@
 import { login, signup } from './actions'
 import GoogleLoginButton from '@/components/GoogleLoginButton'
+import { BrainCircuit } from 'lucide-react'
 
 export default async function LoginPage({
     searchParams
@@ -11,10 +12,14 @@ export default async function LoginPage({
 
     return (
         <div className="flex justify-center items-center min-h-screen bg-gray-50 dark:bg-background">
-            <div className="w-full max-w-md p-8 space-y-6 bg-white dark:bg-slate-800/80 rounded-xl shadow-md border border-transparent dark:border-slate-700/50">
+            <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-slate-800/80 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700/50">
                 <div className="text-center">
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-50">Welcome to PoC</h1>
-                    <p className="text-sm text-gray-500 dark:text-slate-400 mt-2">Sign in to access your dashboard</p>
+                    <div className="flex justify-center mb-6">
+                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/20">
+                            <BrainCircuit size={40} />
+                        </div>
+                    </div>
+                    <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-slate-50">MindSim AI</h1>
                 </div>
 
                 {error && (
