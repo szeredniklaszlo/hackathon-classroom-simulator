@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { mockTranscript, mockAIFeedback, mockClasses } from '@/lib/mockData';
@@ -9,6 +9,7 @@ import { Download, Save, CheckCircle2, AlertCircle, Lightbulb, ArrowLeft, PenLin
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import Link from 'next/link';
+import { createClient } from '@/utils/supabase/client';
 
 export default function VirtualDiary() {
     const params = useParams();
@@ -19,8 +20,32 @@ export default function VirtualDiary() {
     const reportRef = useRef<HTMLDivElement>(null);
     const [notes, setNotes] = useState('');
     const [isExporting, setIsExporting] = useState(false);
+    const [isGuest, setIsGuest] = useState(true); // default: treat as guest until resolved
+    const [authChecked, setAuthChecked] = useState(false);
+
+    // Check Supabase auth state on mount
+    useEffect(() => {
+        const checkAuth = async () => {
+            try {
+                const supabase = createClient();
+                const { data: { user } } = await supabase.auth.getUser();
+                setIsGuest(!user);
+            } catch {
+                setIsGuest(true);
+            } finally {
+                setAuthChecked(true);
+            }
+        };
+        checkAuth();
+    }, []);
 
     const handleSaveReport = () => {
+        if (isGuest) {
+            toast.error("Nincs bejelentkezve", {
+                description: "Kérjük, lépjen be a report mentéséhez.",
+            });
+            return;
+        }
         toast.success("Sikeres mentés az adatbázisba", {
             description: "Class report and notes have been saved.",
         });
@@ -36,14 +61,105 @@ export default function VirtualDiary() {
             setIsExporting(true);
             toast.info("Generating PDF...");
 
-            // Small delay to allow react to render any loading state
             await new Promise(r => setTimeout(r, 100));
 
             const canvas = await html2canvas(reportRef.current, {
                 scale: 2,
                 useCORS: true,
-                logging: false
+                logging: false,
+                // html2canvas cannot parse oklch() (Tailwind v4 default).
+                // onclone lets us patch the cloned DOM before rendering.
+                onclone: (_doc: Document, clonedEl: HTMLElement) => {
+                    // Convert oklch(L C H / alpha) to rgb(r, g, b)
+                    const oklchToRgb = (oklch: string): string => {
+                        const match = oklch.match(
+                            /oklch\(\s*([\d.%]+)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*([\d.]+))?\s*\)/i
+                        );
+                        if (!match) return oklch;
+
+                        let L = parseFloat(match[1]);
+                        const C = parseFloat(match[2]);
+                        const H = parseFloat(match[3]);
+                        const alpha = match[4] !== undefined ? parseFloat(match[4]) : 1;
+
+                        if (match[1].includes('%')) L /= 100;
+
+                        // oklch → oklab
+                        const hRad = (H * Math.PI) / 180;
+                        const a = C * Math.cos(hRad);
+                        const b = C * Math.sin(hRad);
+
+                        // oklab → linear sRGB (via XYZ D65)
+                        const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
+                        const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
+                        const s_ = L - 0.0894841775 * a - 1.2914855480 * b;
+
+                        const lc = l_ * l_ * l_;
+                        const mc = m_ * m_ * m_;
+                        const sc = s_ * s_ * s_;
+
+                        let r = 4.0767416621 * lc - 3.3077115913 * mc + 0.2309699292 * sc;
+                        let g = -1.2684380046 * lc + 2.6097574011 * mc - 0.3413193965 * sc;
+                        let bl = -0.0041960863 * lc - 0.7034186147 * mc + 1.7076147010 * sc;
+
+                        // Gamma correction (linear → sRGB)
+                        const toGamma = (x: number) => {
+                            if (x <= 0.0031308) return 12.92 * x;
+                            return 1.055 * Math.pow(x, 1 / 2.4) - 0.055;
+                        };
+
+                        r = Math.round(Math.max(0, Math.min(1, toGamma(r))) * 255);
+                        g = Math.round(Math.max(0, Math.min(1, toGamma(g))) * 255);
+                        bl = Math.round(Math.max(0, Math.min(1, toGamma(bl))) * 255);
+
+                        return alpha < 1
+                            ? `rgba(${r},${g},${bl},${alpha})`
+                            : `rgb(${r},${g},${bl})`;
+                    };
+
+                    const replaceOklchInStyle = (style: CSSStyleDeclaration) => {
+                        for (let i = 0; i < style.length; i++) {
+                            const prop = style[i];
+                            const val = style.getPropertyValue(prop);
+                            if (val.includes('oklch')) {
+                                const converted = val.replace(
+                                    /oklch\([^)]+\)/gi,
+                                    (match) => oklchToRgb(match)
+                                );
+                                style.setProperty(prop, converted, style.getPropertyPriority(prop));
+                            }
+                        }
+                    };
+
+                    // Fix all inline styles in the cloned tree
+                    const allElements = clonedEl.querySelectorAll<HTMLElement>('*');
+                    allElements.forEach((el) => {
+                        if (el.style) replaceOklchInStyle(el.style);
+                    });
+
+                    // Fix oklch in injected <style> tags (covers Tailwind v4 CSS custom properties)
+                    const clonedDoc = clonedEl.ownerDocument;
+                    const styleTags = clonedDoc.querySelectorAll<HTMLStyleElement>('style');
+                    styleTags.forEach((styleTag) => {
+                        if (styleTag.textContent && styleTag.textContent.includes('oklch')) {
+                            styleTag.textContent = styleTag.textContent.replace(
+                                /oklch\([^)]+\)/gi,
+                                (match) => oklchToRgb(match)
+                            );
+                        }
+                    });
+
+                    // Inject a <style> block that overrides oklch in CSS variables with safe fallbacks
+                    const styleOverride = document.createElement('style');
+                    styleOverride.textContent = `
+                        *, *::before, *::after {
+                            color-scheme: light !important;
+                        }
+                    `;
+                    clonedEl.prepend(styleOverride);
+                },
             });
+
 
             const imgData = canvas.toDataURL('image/png');
             const pdf = new jsPDF({
@@ -90,24 +206,33 @@ export default function VirtualDiary() {
 
                     <button
                         onClick={handleSaveReport}
-                        className="flex items-center gap-2 bg-primary text-white hover:bg-blue-600 transition-colors px-4 py-2 rounded-lg text-sm font-bold shadow-md shadow-primary/20"
+                        disabled={authChecked && isGuest}
+                        title={isGuest ? 'Log in to save your report' : 'Save report to your profile'}
+                        className={`flex items-center gap-2 transition-colors px-4 py-2 rounded-lg text-sm font-bold shadow-md ${authChecked && isGuest
+                            ? 'bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed shadow-none'
+                            : 'bg-primary text-white hover:bg-blue-600 shadow-primary/20'
+                            }`}
                     >
                         <Save size={18} />
-                        <span className="hidden sm:inline">Save Report</span>
+                        <span className="hidden sm:inline">{authChecked && isGuest ? 'Login required' : 'Save Report'}</span>
                     </button>
                 </div>
             </header>
 
             <main className="max-w-4xl mx-auto py-8 px-4 sm:px-6">
 
-                {/* Action Guard for Guest Users */}
-                <div className="mb-6 bg-amber-50 dark:bg-amber-900/15 border border-amber-200 dark:border-amber-800/40 rounded-xl p-4 flex items-start gap-3">
-                    <AlertCircle className="text-amber-500 mt-0.5 shrink-0" size={20} />
-                    <div>
-                        <h4 className="font-semibold text-amber-800 dark:text-amber-300">Guest Mode Active</h4>
-                        <p className="text-sm text-amber-700 dark:text-amber-400 mt-0.5">Log in to save this data permanently to your database profile. Saving now will only simulate the process.</p>
+                {/* Action Guard for Guest Users — only shown when confirmed not logged in */}
+                {authChecked && isGuest && (
+                    <div className="mb-6 bg-amber-50 dark:bg-amber-900/15 border border-amber-200 dark:border-amber-800/40 rounded-xl p-4 flex items-start gap-3">
+                        <AlertCircle className="text-amber-500 mt-0.5 shrink-0" size={20} />
+                        <div>
+                            <h4 className="font-semibold text-amber-800 dark:text-amber-300">Guest Mode Active</h4>
+                            <p className="text-sm text-amber-700 dark:text-amber-400 mt-0.5">
+                                Log in to save this report permanently to your profile.
+                            </p>
+                        </div>
                     </div>
-                </div>
+                )}
 
                 {/* --- PDF CONTENT WRAPPER --- */}
                 <div ref={reportRef} className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800">
