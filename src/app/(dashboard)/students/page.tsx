@@ -204,10 +204,15 @@ export default function StudentsPage() {
                             key={student.id}
                             className="group flex flex-col items-start overflow-hidden rounded-2xl bg-white dark:bg-slate-800/80 p-5 shadow-sm ring-1 ring-slate-100 dark:ring-slate-700/50 transition-all hover:-translate-y-1 hover:shadow-md hover:ring-indigo-500/20 dark:hover:ring-indigo-500/30"
                         >
-                            <div className="flex w-full items-start justify-between">
+                            <div className="flex w-full items-start justify-between relative">
                                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 dark:bg-slate-700/50 text-2xl shadow-sm">
                                     {student.emoji}
                                 </div>
+                                {student.condition && (
+                                    <div className="absolute top-0 right-0 bg-indigo-50 dark:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300 text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full z-10 shadow-sm truncate max-w-[120px]">
+                                        {student.condition}
+                                    </div>
+                                )}
                             </div>
                             <div className="mt-4">
                                 <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">{student.name}</h3>
@@ -331,8 +336,8 @@ export default function StudentsPage() {
                                                 }
                                             }}
                                             className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${isSelected
-                                                    ? 'bg-indigo-100 border-indigo-300 text-indigo-700 dark:bg-indigo-900/40 dark:border-indigo-700 dark:text-indigo-300 shadow-sm'
-                                                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 dark:bg-slate-800/80 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800'
+                                                ? 'bg-indigo-100 border-indigo-300 text-indigo-700 dark:bg-indigo-900/40 dark:border-indigo-700 dark:text-indigo-300 shadow-sm'
+                                                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 dark:bg-slate-800/80 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800'
                                                 }`}
                                         >
                                             {cond}
