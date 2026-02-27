@@ -15,6 +15,7 @@ export interface ClassroomContext {
     sessionId: string;
     students: StudentProfile[]; // Az aktív diákok
     teacherTranscriptChunk: string; // A legújabb, PreProcessor által validált szöveg
+    fullTranscript?: { speaker: string, text: string }[]; // A teljes korábbi beszélgetés
 }
 
 // 3. A Diák Állapot / Kimenet (Amit az Orchestrator ad vissza a Frontendnek)
