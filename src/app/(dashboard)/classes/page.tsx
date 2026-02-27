@@ -42,6 +42,10 @@ export default function ClassesPage() {
     const [drawerMode, setDrawerMode] = useState<'view' | 'create'>('view');
     const [selectedClass, setSelectedClass] = useState<VirtualClass | null>(null);
 
+    // Class aggregate stats
+    const [overviewStats, setOverviewStats] = useState<{ totalDurationSeconds: number, overallAverageSatisfaction: number, sessionCount: number } | null>(null);
+    const [isLoadingStats, setIsLoadingStats] = useState(false);
+
     // Search and filtering
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<Student[]>([]);
@@ -82,10 +86,24 @@ export default function ClassesPage() {
     const [subjectError, setSubjectError] = useState('');
     const [studentError, setStudentError] = useState('');
 
-    const openViewDrawer = (vClass: VirtualClass) => {
+    const openViewDrawer = async (vClass: VirtualClass) => {
         setSelectedClass(vClass);
         setDrawerMode('view');
         setIsDrawerOpen(true);
+
+        // Fetch real stats
+        setIsLoadingStats(true);
+        try {
+            const res = await fetch(`/api/statistics/class-overview?classId=${vClass.id}`);
+            if (res.ok) {
+                const data = await res.json();
+                setOverviewStats(data);
+            }
+        } catch (e) {
+            console.error("Failed to fetch class stats", e);
+        } finally {
+            setIsLoadingStats(false);
+        }
     };
 
     const openCreateDrawer = () => {
@@ -340,15 +358,29 @@ export default function ClassesPage() {
 
                             <p className="text-slate-600 dark:text-slate-400">{selectedClass.description}</p>
 
-                            {/* Mock Stats */}
+                            {/* Live Aggregate Stats */}
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="rounded-xl border border-slate-100 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/50 p-4">
+                                <div className="rounded-xl border border-slate-100 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/50 p-4 transition-colors">
                                     <div className="mb-1 text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2"><Activity size={14} /> Avg. Engagement</div>
-                                    <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">88%</div>
+                                    <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center">
+                                        {isLoadingStats ? <Loader2 size={24} className="animate-spin text-slate-300" /> : `${overviewStats?.overallAverageSatisfaction || 0}%`}
+                                    </div>
+                                    <div className="text-xs text-slate-400 dark:text-slate-500 mt-1.5 font-medium tracking-wide">
+                                        {isLoadingStats ? '...' : `${overviewStats?.sessionCount || 0} RECORDED SESSION(S)`}
+                                    </div>
                                 </div>
-                                <div className="rounded-xl border border-slate-100 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/50 p-4">
-                                    <div className="mb-1 text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2"><Clock size={14} /> Total Hours</div>
-                                    <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">12.5h</div>
+                                <div className="rounded-xl border border-slate-100 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/50 p-4 transition-colors">
+                                    <div className="mb-1 text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2"><Clock size={14} /> Total Time Taught</div>
+                                    <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center">
+                                        {isLoadingStats ? <Loader2 size={24} className="animate-spin text-slate-300" /> : overviewStats?.totalDurationSeconds ?
+                                            (overviewStats.totalDurationSeconds >= 3600
+                                                ? `${(overviewStats.totalDurationSeconds / 3600).toFixed(1)}h`
+                                                : `${Math.floor(overviewStats.totalDurationSeconds / 60)}m ${overviewStats.totalDurationSeconds % 60}s`)
+                                            : '0m 0s'}
+                                    </div>
+                                    <div className="text-xs text-slate-400 dark:text-slate-500 mt-1.5 font-medium tracking-wide">
+                                        {isLoadingStats ? '...' : 'ACROSS ALL SESSIONS'}
+                                    </div>
                                 </div>
                             </div>
 
