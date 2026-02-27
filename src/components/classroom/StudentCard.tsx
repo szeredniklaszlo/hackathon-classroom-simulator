@@ -110,7 +110,7 @@ export default function StudentCard({ student, idx }: { student: Student, idx: n
 
             {/* Condition Label */}
             {student.condition && (
-                <div className="absolute top-3 left-4 bg-indigo-50 dark:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300 text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full z-10 shadow-sm truncate max-w-[100px]">
+                <div className="absolute top-3 right-4 bg-indigo-50 dark:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300 text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full z-10 shadow-sm truncate max-w-[100px]">
                     {student.condition}
                 </div>
             )}
