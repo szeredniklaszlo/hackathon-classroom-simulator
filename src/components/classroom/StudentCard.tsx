@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Hand } from 'lucide-react';
+import { Hand, Volume2 } from 'lucide-react';
 import { Student } from '@/types/shared';
+import { toast } from 'sonner';
 
 // Helper for color based on mood
 const getMoodBg = (score: number) => {
@@ -14,22 +15,71 @@ const getMoodBg = (score: number) => {
 
 export default function StudentCard({ student, idx }: { student: Student, idx: number }) {
     // Local state for displaying the message temporarily
-    const [displayedMessage, setDisplayedMessage] = useState<string | null>(null);
-    const [displayedAction, setDisplayedAction] = useState<'LISTEN' | 'RAISE_HAND' | 'ANSWER_DIRECTLY' | 'WHISPER' | 'INTERRUPT'>('LISTEN');
+    const [isSpeaking, setIsSpeaking] = useState(false);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
 
     useEffect(() => {
-        if (student.currentMessage) {
-            setDisplayedMessage(student.currentMessage);
-            setDisplayedAction(student.currentAction || 'LISTEN');
+        // Cleanup function for audio
+        return () => {
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current.src = '';
+            }
+        };
+    }, []);
 
-            // Clear the bubble after 5 seconds
-            const timer = setTimeout(() => {
-                setDisplayedMessage(null);
-            }, 6000);
+    useEffect(() => {
+        if (student.currentMessage && (student.currentAction === 'ANSWER_DIRECTLY' || student.currentAction === 'INTERRUPT' || student.currentAction === 'WHISPER')) {
+            const playTTS = async () => {
+                try {
+                    setIsSpeaking(true);
+                    const response = await fetch('/api/tts', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            text: student.currentMessage,
+                            studentType: student.type
+                        }),
+                    });
 
-            return () => clearTimeout(timer);
+                    if (!response.ok) {
+                        throw new Error('TTS generation failed');
+                    }
+
+                    const blob = await response.blob();
+                    const url = URL.createObjectURL(blob);
+
+                    if (audioRef.current) {
+                        audioRef.current.pause();
+                    }
+
+                    const audio = new Audio(url);
+                    audioRef.current = audio;
+
+                    // Add slight volume reduction for whispers
+                    if (student.currentAction === 'WHISPER') {
+                        audio.volume = 0.4;
+                    }
+
+                    audio.onended = () => {
+                        setIsSpeaking(false);
+                        URL.revokeObjectURL(url);
+                    };
+
+                    await audio.play();
+                } catch (error) {
+                    console.error("Failed to play student audio:", error);
+                    setIsSpeaking(false);
+                    // Fallback to toast if audio fails
+                    toast.error(`Nem sikerült lejátszani ${student.name} hangját.`);
+                }
+            };
+
+            playTTS();
         }
-    }, [student.currentMessage, student.currentAction]);
+    }, [student.currentMessage, student.currentAction, student.type, student.name]);
 
     return (
         <motion.div
@@ -40,38 +90,41 @@ export default function StudentCard({ student, idx }: { student: Student, idx: n
             transition={{ delay: idx * 0.05 }}
             className={`h-full w-full max-w-[240px] aspect-square rounded-[2rem] border-2 flex flex-col items-center justify-center p-4 relative shadow-sm transition-all duration-500
                 ${getMoodBg(student.moodScore)} border-white ring-1 ring-slate-900/5 hover:shadow-md
+                ${isSpeaking ? 'ring-4 ring-primary/40 dark:ring-sky-500/40' : ''}
             `}
         >
-            {/* Speech Bubble */}
+            {/* Audio Indicator */}
             <AnimatePresence>
-                {displayedMessage && (
+                {isSpeaking && (
                     <motion.div
                         initial={{ opacity: 0, y: 10, scale: 0.8 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.8 }}
-                        // Note: Using relative z-index logic and absolute so it doesn't get clipped
-                        className="absolute -top-16 left-1/2 -translate-x-1/2 w-max max-w-[220px] z-50 pointer-events-none"
+                        className="absolute -top-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-white dark:bg-slate-800 px-3 py-1.5 rounded-full shadow-md border border-slate-200 dark:border-slate-700"
                     >
-                        <div className="bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 text-sm font-medium px-4 py-3 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 relative text-center">
-                            {displayedAction === 'WHISPER' && <span className="text-xs text-slate-400 dark:text-slate-500 block mb-1">*(Whispering)*</span>}
-                            {displayedAction === 'INTERRUPT' && <span className="text-xs text-red-500 dark:text-red-400 font-bold block mb-1">*(Interrupts)*</span>}
-                            <p className="line-clamp-3 leading-snug">{displayedMessage}</p>
-                            {/* Triangle pointer */}
-                            <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 w-5 h-5 bg-white dark:bg-slate-800 border-b border-r border-slate-200 dark:border-slate-700 rotate-45 rounded-sm"></div>
-                        </div>
+                        <Volume2 size={14} className="text-primary dark:text-sky-400 animate-pulse" />
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Speaking...</span>
                     </motion.div>
                 )}
             </AnimatePresence>
 
             {/* Hand Raise Indicator */}
-            {student.raisedHand && (
+            {student.raisedHand && !isSpeaking && (
                 <div className="absolute -top-3 -right-3 bg-white dark:bg-slate-800 p-2 rounded-full shadow-lg border border-slate-100 dark:border-slate-700 z-10 animate-bounce">
                     <Hand className="text-amber-500 fill-amber-100" size={24} />
                 </div>
             )}
 
-            <div className="text-6xl mb-4 bg-white/50 dark:bg-white/10 w-24 h-24 rounded-full flex items-center justify-center shadow-inner border border-white dark:border-white/10 backdrop-blur-sm relative z-0">
+            <div className={`text-6xl mb-4 bg-white/50 dark:bg-white/10 w-24 h-24 rounded-full flex items-center justify-center shadow-inner border border-white dark:border-white/10 backdrop-blur-sm relative z-0 transition-transform duration-300 ${isSpeaking ? 'scale-110' : ''}`}>
                 {student.emoji}
+
+                {/* Speaking animation rings */}
+                {isSpeaking && (
+                    <>
+                        <div className="absolute inset-0 rounded-full border-2 border-primary/30 dark:border-sky-400/30 animate-[ping_1.5s_cubic-bezier(0,0,0.2,1)_infinite]"></div>
+                        <div className="absolute inset-0 rounded-full border-2 border-primary/20 dark:border-sky-400/20 animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite_0.5s]"></div>
+                    </>
+                )}
             </div>
 
             <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur px-4 py-2 rounded-xl text-center shadow-sm w-full border border-white/50 dark:border-slate-700/50 z-10 relative">

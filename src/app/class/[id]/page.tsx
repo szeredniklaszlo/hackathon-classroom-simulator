@@ -16,12 +16,39 @@ export default function VirtualClassroom() {
     const router = useRouter();
     const classId = params.id as string;
 
-    const { classes, students: globalStudents } = useStore();
+    const { classes, students: globalStudents, setClasses, setStudents: setGlobalStudents } = useStore();
 
-    // Find initial class or fallback
+    // Fetch data on direct navigation if store is empty
+    useEffect(() => {
+        if (classes.length === 0) {
+            const fetchData = async () => {
+                try {
+                    const [classesRes, studentsRes] = await Promise.all([
+                        fetch('/api/classes'),
+                        fetch('/api/students')
+                    ]);
+
+                    if (classesRes.ok) {
+                        const data = await classesRes.json();
+                        setClasses(data.classes);
+                    }
+                    if (studentsRes.ok) {
+                        const data = await studentsRes.json();
+                        setGlobalStudents(data.students);
+                    }
+                } catch (error) {
+                    console.error("Error fetching data:", error);
+                    toast.error('Hiba történt az adatok betöltésekor.');
+                }
+            };
+            fetchData();
+        }
+    }, [classes.length, setClasses, setGlobalStudents]);
+
+    // Find initial class
     const initialClass = classes.find(c => c.id === classId);
 
-    // If classes are not loaded yet or invalid ID, show loading or redirect
+    // If classes are loaded but ID is invalid, show loading or redirect
     useEffect(() => {
         if (classes.length > 0 && !initialClass) {
             toast.error("Class not found.");
@@ -29,7 +56,16 @@ export default function VirtualClassroom() {
         }
     }, [classes, initialClass, router]);
 
+    // Update students state when initialClass becomes available
     const [students, setStudents] = useState<Student[]>(initialClass?.students || []);
+
+    // Update local state when initialClass fully loads from the async fetch
+    useEffect(() => {
+        if (initialClass?.students && students.length === 0) {
+            setStudents(initialClass.students);
+        }
+    }, [initialClass]);
+
     const [isPlaying, setIsPlaying] = useState(false);
     const [seconds, setSeconds] = useState(0);
 
