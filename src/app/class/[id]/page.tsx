@@ -39,7 +39,7 @@ export default function VirtualClassroom() {
                     }
                 } catch (error) {
                     console.error("Error fetching data:", error);
-                    toast.error('Hiba történt az adatok betöltésekor.');
+                    toast.error('Error loading data.');
                 } finally {
                     setIsLoadingData(false);
                 }
@@ -56,7 +56,7 @@ export default function VirtualClassroom() {
     // If data finished loading and class is not found, redirect
     useEffect(() => {
         if (!isLoadingData && !initialClass) {
-            toast.error("Osztály nem található, vagy még nincs létrehozva.");
+            toast.error("Class not found or not created yet.");
             router.push('/dashboard');
         }
     }, [isLoadingData, initialClass, router]);
@@ -232,7 +232,7 @@ export default function VirtualClassroom() {
     };
 
     const handleSaveRoster = () => {
-        toast.success("Sikeres mentés az adatbázisba", {
+        toast.success("Successfully saved to database", {
             description: "Class roster has been successfully updated.",
         });
     };
@@ -243,14 +243,14 @@ export default function VirtualClassroom() {
         if (available.length > 0) {
             const newStudent = available[Math.floor(Math.random() * available.length)];
             setStudents([...students, newStudent]);
-            toast.success(`Hazádtuk a fiktív diákot: ${newStudent.name}`);
+            toast.success(`Added dummy student: ${newStudent.name}`);
         } else if (globalStudents.length > 0) {
             // Just clone one for demo purposes
             const clone = { ...globalStudents[Math.floor(Math.random() * globalStudents.length)], id: `s${Date.now()}` };
             setStudents([...students, clone]);
-            toast.success(`Hozzáadtunk egy klónozott diákot: ${clone.name}`);
+            toast.success(`Added a cloned student: ${clone.name}`);
         } else {
-            toast.error("Nincs elég diák az adatbázisban.");
+            toast.error("Not enough students in the database.");
         }
     };
 

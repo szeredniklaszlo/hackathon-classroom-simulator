@@ -49,8 +49,8 @@ export default function VirtualDiary() {
 
     const handleSaveReport = async () => {
         if (isGuest) {
-            toast.error("Nincs bejelentkezve", {
-                description: "Kérjük, lépjen be a report mentéséhez.",
+            toast.error("Not logged in", {
+                description: "Please log in to save the report.",
             });
             return;
         }
@@ -60,7 +60,7 @@ export default function VirtualDiary() {
             const { data: { user }, error: authError } = await supabase.auth.getUser();
 
             if (authError || !user) {
-                throw new Error("Kérjük jelentkezzen be újra.");
+                throw new Error("Please log in again.");
             }
 
             const { error: dbError } = await supabase
@@ -74,8 +74,8 @@ export default function VirtualDiary() {
 
             if (dbError) throw dbError;
 
-            toast.success("Sikeres mentés az adatbázisba", {
-                description: "Az osztály átirata és a jegyzetek mentve lettek a profilodhoz.",
+            toast.success("Successfully saved to database", {
+                description: "The class transcript and notes have been saved to your profile.",
             });
 
             setTimeout(() => {
