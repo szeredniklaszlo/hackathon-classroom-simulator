@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useStore } from '@/store/useStore';
 import { Student, StudentType } from '@/types/shared';
-import { UserPlus, X, Sparkles, AlertCircle, Loader2, ArrowDownAZ, Clock } from 'lucide-react';
+import { UserPlus, X, Sparkles, AlertCircle, Loader2, ArrowDownAZ, Clock, Save } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function StudentsPage() {
@@ -560,12 +560,9 @@ export default function StudentsPage() {
                         disabled={isGenerating}
                         className="flex w-full justify-center items-center gap-2 rounded-xl bg-indigo-500 dark:bg-indigo-600 py-3 font-semibold text-white shadow-sm transition-all hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:shadow-md active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
                     >
-                        <Sparkles size={18} />
-                        {isGenerating ? 'Saving...' : 'Generate AI Persona'}
+                        <Save size={18} />
+                        {isGenerating ? 'Saving...' : 'Save Persona'}
                     </button>
-                    <p className="mt-3 text-center text-xs text-slate-400 dark:text-slate-500">
-                        This immediately creates a prompt context for the LLM.
-                    </p>
                 </div>
             </div>
         </div>
