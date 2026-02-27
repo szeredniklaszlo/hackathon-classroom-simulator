@@ -26,6 +26,42 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Age must be between 6 and 18' }, { status: 400 });
         }
 
+        let generatedPrompt = '';
+        if (process.env.OPENAI_API_KEY) {
+            try {
+                const openAiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: 'gpt-4o-mini',
+                        messages: [
+                            {
+                                role: 'system',
+                                content: 'You are an expert prompt engineer. Based on the provided student details, write an English prompt that can be given to an AI so that the AI behaves exactly like this student in a classroom simulator. Only output the generated prompt, nothing else.'
+                            },
+                            {
+                                role: 'user',
+                                content: `Student details:\nName: ${name}\nAge: ${age}\nType: ${type}\nPersonality: ${personality}\nActivity Level: ${activity_level}\nConflict Level: ${conflict_level}\nAttention Span: ${attention_span}`
+                            }
+                        ],
+                        temperature: 0.7,
+                    })
+                });
+
+                if (openAiResponse.ok) {
+                    const aiData = await openAiResponse.json();
+                    generatedPrompt = aiData.choices?.[0]?.message?.content?.trim() || '';
+                } else {
+                    console.error("OpenAI API Error:", await openAiResponse.text());
+                }
+            } catch (aiError) {
+                console.error("Failed to generate prompt:", aiError);
+            }
+        }
+
         // Insert into Supabase
         const { data, error } = await supabase
             .from('student_personas')
@@ -38,7 +74,8 @@ export async function POST(request: Request) {
                     activity_level,
                     conflict_level,
                     attention_span,
-                    type
+                    type,
+                    prompt: generatedPrompt || null
                 }
             ])
             .select()
@@ -61,7 +98,7 @@ export async function GET() {
     try {
         const { data, error } = await supabase
             .from('student_personas')
-            .select('id, name, age, emoji, type')
+            .select('id, name, age, emoji, type, prompt')
             .order('created_at', { ascending: false });
 
         if (error) {
