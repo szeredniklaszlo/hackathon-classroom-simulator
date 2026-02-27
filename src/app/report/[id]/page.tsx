@@ -31,6 +31,10 @@ export default function VirtualDiary() {
     const [transcript, setTranscript] = useState<TranscriptEntry[]>(mockTranscript);
     const [isLoadingTranscript, setIsLoadingTranscript] = useState(false);
 
+    // AI Feedback State
+    const [aiFeedback, setAiFeedback] = useState<{ wentWell: string[], toImprove: string[], suggestions: string[] } | null>(null);
+    const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
+
     // Check Supabase auth state on mount
     useEffect(() => {
         const checkAuth = async () => {
@@ -98,6 +102,9 @@ export default function VirtualDiary() {
                 if (data.transcript && data.transcript.length > 0) {
                     setTranscript(data.transcript);
                     toast.success("Live transcript loaded successfully!");
+
+                    // Generate AI Feedback based on transcript
+                    await generateAIFeedback(data.transcript);
                 } else {
                     toast.info("No live transcript found for this session.", { description: "Showing mock data instead." });
                 }
@@ -109,6 +116,34 @@ export default function VirtualDiary() {
             toast.error("Connection error while loading transcript.");
         } finally {
             setIsLoadingTranscript(false);
+        }
+    };
+
+    const generateAIFeedback = async (transcriptData: TranscriptEntry[]) => {
+        setIsGeneratingFeedback(true);
+        const toastId = toast.loading("🤖 Szimuláció elemzése és AI Coach értékelés készítése...");
+        try {
+            const res = await fetch('/api/feedback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ transcript: transcriptData })
+            });
+
+            if (!res.ok) throw new Error("Failed to fetch AI feedback");
+
+            const data = await res.json();
+            if (data.feedback) {
+                setAiFeedback(data.feedback);
+                toast.success("AI Coach elkészült az elemzéssel!", { id: toastId });
+            } else {
+                throw new Error("Invalid response format");
+            }
+
+        } catch (error) {
+            console.error(error);
+            toast.error("Hiba az AI értékelés generálása közben.", { id: toastId });
+        } finally {
+            setIsGeneratingFeedback(false);
         }
     };
 
@@ -235,30 +270,42 @@ export default function VirtualDiary() {
 
                         {/* AI Feedback Cards */}
                         <div className="space-y-4">
-                            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3 flex items-center gap-2">
-                                <SparklesIcon /> AI Coach Feedback
-                            </h3>
-
-                            <div className="bg-green-50 dark:bg-green-900/15 border border-green-100 dark:border-green-800/40 rounded-2xl p-4">
-                                <h4 className="text-green-800 dark:text-green-300 font-bold flex items-center gap-2 mb-2 text-sm"><CheckCircle2 size={16} /> What Went Well</h4>
-                                <ul className="text-sm text-green-700 dark:text-green-400 space-y-1 pl-6 list-disc marker:text-green-300">
-                                    {mockAIFeedback.wentWell.map((fb, i) => <li key={i}>{fb}</li>)}
-                                </ul>
+                            <div className="flex items-center justify-between mb-3">
+                                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                                    <SparklesIcon /> AI Coach Feedback
+                                </h3>
+                                {isGeneratingFeedback && <span className="text-xs font-semibold text-primary animate-pulse">Generating...</span>}
                             </div>
 
-                            <div className="bg-rose-50 dark:bg-rose-900/15 border border-rose-100 dark:border-rose-800/40 rounded-2xl p-4">
-                                <h4 className="text-rose-800 dark:text-rose-300 font-bold flex items-center gap-2 mb-2 text-sm"><AlertCircle size={16} /> Areas to Consider</h4>
-                                <ul className="text-sm text-rose-700 dark:text-rose-400 space-y-1 pl-6 list-disc marker:text-rose-300">
-                                    {mockAIFeedback.toImprove.map((fb, i) => <li key={i}>{fb}</li>)}
-                                </ul>
-                            </div>
+                            {!aiFeedback && !isGeneratingFeedback ? (
+                                <div className="p-8 text-center bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700/50 h-full flex flex-col justify-center items-center">
+                                    <Lightbulb size={32} className="text-slate-300 dark:text-slate-600 mb-3" />
+                                    <p className="text-slate-500 dark:text-slate-400 text-sm">Use &quot;Load Live Transcript&quot; to fetch your simulation data and generate your AI Coach feedback.</p>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="bg-green-50 dark:bg-green-900/15 border border-green-100 dark:border-green-800/40 rounded-2xl p-4 transition-all" style={{ opacity: isGeneratingFeedback ? 0.5 : 1 }}>
+                                        <h4 className="text-green-800 dark:text-green-300 font-bold flex items-center gap-2 mb-2 text-sm"><CheckCircle2 size={16} /> What Went Well</h4>
+                                        <ul className="text-sm text-green-700 dark:text-green-400 space-y-1 pl-6 list-disc marker:text-green-300">
+                                            {aiFeedback ? aiFeedback.wentWell.map((fb, i) => <li key={i}>{fb}</li>) : <li>Loading...</li>}
+                                        </ul>
+                                    </div>
 
-                            <div className="bg-blue-50 dark:bg-blue-900/15 border border-blue-100 dark:border-blue-800/40 rounded-2xl p-4">
-                                <h4 className="text-blue-800 dark:text-blue-300 font-bold flex items-center gap-2 mb-2 text-sm"><Lightbulb size={16} /> Suggested Approaches</h4>
-                                <ul className="text-sm text-blue-700 dark:text-blue-400 space-y-1 pl-6 list-disc marker:text-blue-300">
-                                    {mockAIFeedback.suggestions.map((fb, i) => <li key={i}>{fb}</li>)}
-                                </ul>
-                            </div>
+                                    <div className="bg-rose-50 dark:bg-rose-900/15 border border-rose-100 dark:border-rose-800/40 rounded-2xl p-4 transition-all" style={{ opacity: isGeneratingFeedback ? 0.5 : 1 }}>
+                                        <h4 className="text-rose-800 dark:text-rose-300 font-bold flex items-center gap-2 mb-2 text-sm"><AlertCircle size={16} /> Areas to Consider</h4>
+                                        <ul className="text-sm text-rose-700 dark:text-rose-400 space-y-1 pl-6 list-disc marker:text-rose-300">
+                                            {aiFeedback ? aiFeedback.toImprove.map((fb, i) => <li key={i}>{fb}</li>) : <li>Loading...</li>}
+                                        </ul>
+                                    </div>
+
+                                    <div className="bg-blue-50 dark:bg-blue-900/15 border border-blue-100 dark:border-blue-800/40 rounded-2xl p-4 transition-all" style={{ opacity: isGeneratingFeedback ? 0.5 : 1 }}>
+                                        <h4 className="text-blue-800 dark:text-blue-300 font-bold flex items-center gap-2 mb-2 text-sm"><Lightbulb size={16} /> Suggested Approaches</h4>
+                                        <ul className="text-sm text-blue-700 dark:text-blue-400 space-y-1 pl-6 list-disc marker:text-blue-300">
+                                            {aiFeedback ? aiFeedback.suggestions.map((fb, i) => <li key={i}>{fb}</li>) : <li>Loading...</li>}
+                                        </ul>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
 
