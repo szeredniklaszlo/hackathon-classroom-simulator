@@ -1,15 +1,17 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { mockTranscript, mockAIFeedback } from '@/lib/mockData';
 import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
-import { Download, Save, CheckCircle2, AlertCircle, Lightbulb, ArrowLeft, PenLine } from 'lucide-react';
-import html2canvas from 'html2canvas';
+import { Download, Save, CheckCircle2, AlertCircle, Lightbulb, ArrowLeft, PenLine, RefreshCcw } from 'lucide-react';
+import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
 import Link from 'next/link';
+import { createClient } from '@/utils/supabase/client';
+import { TranscriptEntry } from '@/types/shared';
 
 export default function VirtualDiary() {
     const params = useParams();
@@ -24,8 +26,34 @@ export default function VirtualDiary() {
     const reportRef = useRef<HTMLDivElement>(null);
     const [notes, setNotes] = useState('');
     const [isExporting, setIsExporting] = useState(false);
+    const [isGuest, setIsGuest] = useState(true); // default: treat as guest until resolved
+    const [authChecked, setAuthChecked] = useState(false);
+    const [transcript, setTranscript] = useState<TranscriptEntry[]>(mockTranscript);
+    const [isLoadingTranscript, setIsLoadingTranscript] = useState(false);
+
+    // Check Supabase auth state on mount
+    useEffect(() => {
+        const checkAuth = async () => {
+            try {
+                const supabase = createClient();
+                const { data: { user } } = await supabase.auth.getUser();
+                setIsGuest(!user);
+            } catch {
+                setIsGuest(true);
+            } finally {
+                setAuthChecked(true);
+            }
+        };
+        checkAuth();
+    }, []);
 
     const handleSaveReport = () => {
+        if (isGuest) {
+            toast.error("Nincs bejelentkezve", {
+                description: "Kérjük, lépjen be a report mentéséhez.",
+            });
+            return;
+        }
         toast.success("Sikeres mentés az adatbázisba", {
             description: "Class report and notes have been saved.",
         });
@@ -35,35 +63,64 @@ export default function VirtualDiary() {
         }, 1500);
     };
 
+    const handleLoadLiveTranscript = async () => {
+        setIsLoadingTranscript(true);
+        try {
+            const res = await fetch(`/api/transcripts?classId=${classId}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.transcript && data.transcript.length > 0) {
+                    setTranscript(data.transcript);
+                    toast.success("Live transcript loaded successfully!");
+                } else {
+                    toast.info("No live transcript found for this session.", { description: "Showing mock data instead." });
+                }
+            } else {
+                toast.error("Failed to load live transcript.");
+            }
+        } catch (e) {
+            console.error(e);
+            toast.error("Connection error while loading transcript.");
+        } finally {
+            setIsLoadingTranscript(false);
+        }
+    };
+
     const exportPDF = async () => {
         if (!reportRef.current) return;
         try {
             setIsExporting(true);
-            toast.info("Generating PDF...");
+            toast.info("Generating PDF...", { id: 'pdf-toast', duration: 10000 });
 
-            // Small delay to allow react to render any loading state
+            // Allow UI to update
             await new Promise(r => setTimeout(r, 100));
 
-            const canvas = await html2canvas(reportRef.current, {
-                scale: 2,
-                useCORS: true,
-                logging: false
+            const element = reportRef.current;
+
+            // html-to-image handles oklch natively because it lets the browser render the DOM into an SVG foreignObject
+            const imgData = await toPng(element, {
+                cacheBust: true,
+                pixelRatio: 2,
+                fontEmbedCSS: '' // Use existing loaded fonts
             });
 
-            const imgData = canvas.toDataURL('image/png');
+            // Calculate PDF dimensions (using scaled sizes since pixelRatio is 2)
+            const width = element.offsetWidth * 2;
+            const height = element.offsetHeight * 2;
+
             const pdf = new jsPDF({
                 orientation: 'portrait',
                 unit: 'px',
-                format: [canvas.width, canvas.height]
+                format: [width, height]
             });
 
-            pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+            pdf.addImage(imgData, 'PNG', 0, 0, width, height);
             pdf.save(`Class_Report_${(currentClass?.subject || 'report').replace(/[^a-z0-9]/gi, '_')}.pdf`);
 
-            toast.success("PDF Downloaded successfully!");
-        } catch (error) {
-            console.error(error);
-            toast.error("Failed to generate PDF.", { description: "An unexpected error occurred." });
+            toast.success("PDF Downloaded successfully!", { id: 'pdf-toast' });
+        } catch (error: any) {
+            console.error('PDF Export Error:', error);
+            toast.error("Failed to generate PDF.", { id: 'pdf-toast', description: error?.message || "An unexpected error occurred." });
         } finally {
             setIsExporting(false);
         }
@@ -95,24 +152,33 @@ export default function VirtualDiary() {
 
                     <button
                         onClick={handleSaveReport}
-                        className="flex items-center gap-2 bg-primary text-white hover:bg-blue-600 transition-colors px-4 py-2 rounded-lg text-sm font-bold shadow-md shadow-primary/20"
+                        disabled={authChecked && isGuest}
+                        title={isGuest ? 'Log in to save your report' : 'Save report to your profile'}
+                        className={`flex items-center gap-2 transition-colors px-4 py-2 rounded-lg text-sm font-bold shadow-md ${authChecked && isGuest
+                            ? 'bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed shadow-none'
+                            : 'bg-primary text-white hover:bg-blue-600 shadow-primary/20'
+                            }`}
                     >
                         <Save size={18} />
-                        <span className="hidden sm:inline">Save Report</span>
+                        <span className="hidden sm:inline">{authChecked && isGuest ? 'Login required' : 'Save Report'}</span>
                     </button>
                 </div>
             </header>
 
             <main className="max-w-4xl mx-auto py-8 px-4 sm:px-6">
 
-                {/* Action Guard for Guest Users */}
-                <div className="mb-6 bg-amber-50 dark:bg-amber-900/15 border border-amber-200 dark:border-amber-800/40 rounded-xl p-4 flex items-start gap-3">
-                    <AlertCircle className="text-amber-500 mt-0.5 shrink-0" size={20} />
-                    <div>
-                        <h4 className="font-semibold text-amber-800 dark:text-amber-300">Guest Mode Active</h4>
-                        <p className="text-sm text-amber-700 dark:text-amber-400 mt-0.5">Log in to save this data permanently to your database profile. Saving now will only simulate the process.</p>
+                {/* Action Guard for Guest Users — only shown when confirmed not logged in */}
+                {authChecked && isGuest && (
+                    <div className="mb-6 bg-amber-50 dark:bg-amber-900/15 border border-amber-200 dark:border-amber-800/40 rounded-xl p-4 flex items-start gap-3">
+                        <AlertCircle className="text-amber-500 mt-0.5 shrink-0" size={20} />
+                        <div>
+                            <h4 className="font-semibold text-amber-800 dark:text-amber-300">Guest Mode Active</h4>
+                            <p className="text-sm text-amber-700 dark:text-amber-400 mt-0.5">
+                                Log in to save this report permanently to your profile.
+                            </p>
+                        </div>
                     </div>
-                </div>
+                )}
 
                 {/* --- PDF CONTENT WRAPPER --- */}
                 <div ref={reportRef} className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800">
@@ -172,9 +238,19 @@ export default function VirtualDiary() {
 
                     {/* Transcript Section */}
                     <div>
-                        <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-6 pt-6 border-t border-slate-100 dark:border-slate-800">Class Transcript</h3>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pt-6 border-t border-slate-100 dark:border-slate-800">
+                            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">Class Transcript</h3>
+                            <button
+                                onClick={handleLoadLiveTranscript}
+                                disabled={isLoadingTranscript}
+                                className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 border border-indigo-100 dark:border-indigo-800 rounded-lg text-sm font-bold transition-colors disabled:opacity-50"
+                            >
+                                <RefreshCcw size={16} className={isLoadingTranscript ? 'animate-spin' : ''} />
+                                {isLoadingTranscript ? 'Loading...' : 'Load Live Transcript'}
+                            </button>
+                        </div>
                         <div className="space-y-4">
-                            {mockTranscript.map((entry, idx) => (
+                            {transcript.length > 0 ? transcript.map((entry, idx) => (
                                 <motion.div
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
@@ -206,7 +282,9 @@ export default function VirtualDiary() {
                                         </span>
                                     )}
                                 </motion.div>
-                            ))}
+                            )) : (
+                                <p className="text-slate-500 dark:text-slate-400 italic text-center py-8">No conversation recorded during this class.</p>
+                            )}
                         </div>
                     </div>
 

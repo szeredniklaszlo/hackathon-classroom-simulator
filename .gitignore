@@ -44,3 +44,6 @@ next-env.d.ts
 _bmad
 .agent
 help.txt
+
+# transcripts
+.transcripts.json
