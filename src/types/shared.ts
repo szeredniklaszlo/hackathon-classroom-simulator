@@ -47,6 +47,7 @@ export interface Student {
     raisedHand: boolean;
     learningStatus: string;
     struggles: string;
+    prompt?: string;
 }
 
 export interface VirtualClass {
