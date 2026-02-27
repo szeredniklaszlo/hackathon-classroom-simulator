@@ -7,7 +7,7 @@ import { mockTranscript, mockAIFeedback } from '@/lib/mockData';
 import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
 import { Download, Save, CheckCircle2, AlertCircle, Lightbulb, ArrowLeft, PenLine, RefreshCcw } from 'lucide-react';
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
@@ -90,122 +90,37 @@ export default function VirtualDiary() {
         if (!reportRef.current) return;
         try {
             setIsExporting(true);
-            toast.info("Generating PDF...");
+            toast.info("Generating PDF...", { id: 'pdf-toast', duration: 10000 });
 
+            // Allow UI to update
             await new Promise(r => setTimeout(r, 100));
 
-            const canvas = await html2canvas(reportRef.current, {
-                scale: 2,
-                useCORS: true,
-                logging: false,
-                // html2canvas cannot parse oklch() (Tailwind v4 default).
-                // onclone lets us patch the cloned DOM before rendering.
-                onclone: (_doc: Document, clonedEl: HTMLElement) => {
-                    // Convert oklch(L C H / alpha) to rgb(r, g, b)
-                    const oklchToRgb = (oklch: string): string => {
-                        const match = oklch.match(
-                            /oklch\(\s*([\d.%]+)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*([\d.]+))?\s*\)/i
-                        );
-                        if (!match) return oklch;
+            const element = reportRef.current;
 
-                        let L = parseFloat(match[1]);
-                        const C = parseFloat(match[2]);
-                        const H = parseFloat(match[3]);
-                        const alpha = match[4] !== undefined ? parseFloat(match[4]) : 1;
-
-                        if (match[1].includes('%')) L /= 100;
-
-                        // oklch → oklab
-                        const hRad = (H * Math.PI) / 180;
-                        const a = C * Math.cos(hRad);
-                        const b = C * Math.sin(hRad);
-
-                        // oklab → linear sRGB (via XYZ D65)
-                        const l_ = L + 0.3963377774 * a + 0.2158037573 * b;
-                        const m_ = L - 0.1055613458 * a - 0.0638541728 * b;
-                        const s_ = L - 0.0894841775 * a - 1.2914855480 * b;
-
-                        const lc = l_ * l_ * l_;
-                        const mc = m_ * m_ * m_;
-                        const sc = s_ * s_ * s_;
-
-                        let r = 4.0767416621 * lc - 3.3077115913 * mc + 0.2309699292 * sc;
-                        let g = -1.2684380046 * lc + 2.6097574011 * mc - 0.3413193965 * sc;
-                        let bl = -0.0041960863 * lc - 0.7034186147 * mc + 1.7076147010 * sc;
-
-                        // Gamma correction (linear → sRGB)
-                        const toGamma = (x: number) => {
-                            if (x <= 0.0031308) return 12.92 * x;
-                            return 1.055 * Math.pow(x, 1 / 2.4) - 0.055;
-                        };
-
-                        r = Math.round(Math.max(0, Math.min(1, toGamma(r))) * 255);
-                        g = Math.round(Math.max(0, Math.min(1, toGamma(g))) * 255);
-                        bl = Math.round(Math.max(0, Math.min(1, toGamma(bl))) * 255);
-
-                        return alpha < 1
-                            ? `rgba(${r},${g},${bl},${alpha})`
-                            : `rgb(${r},${g},${bl})`;
-                    };
-
-                    const replaceOklchInStyle = (style: CSSStyleDeclaration) => {
-                        for (let i = 0; i < style.length; i++) {
-                            const prop = style[i];
-                            const val = style.getPropertyValue(prop);
-                            if (val.includes('oklch')) {
-                                const converted = val.replace(
-                                    /oklch\([^)]+\)/gi,
-                                    (match) => oklchToRgb(match)
-                                );
-                                style.setProperty(prop, converted, style.getPropertyPriority(prop));
-                            }
-                        }
-                    };
-
-                    // Fix all inline styles in the cloned tree
-                    const allElements = clonedEl.querySelectorAll<HTMLElement>('*');
-                    allElements.forEach((el) => {
-                        if (el.style) replaceOklchInStyle(el.style);
-                    });
-
-                    // Fix oklch in injected <style> tags (covers Tailwind v4 CSS custom properties)
-                    const clonedDoc = clonedEl.ownerDocument;
-                    const styleTags = clonedDoc.querySelectorAll<HTMLStyleElement>('style');
-                    styleTags.forEach((styleTag) => {
-                        if (styleTag.textContent && styleTag.textContent.includes('oklch')) {
-                            styleTag.textContent = styleTag.textContent.replace(
-                                /oklch\([^)]+\)/gi,
-                                (match) => oklchToRgb(match)
-                            );
-                        }
-                    });
-
-                    // Inject a <style> block that overrides oklch in CSS variables with safe fallbacks
-                    const styleOverride = document.createElement('style');
-                    styleOverride.textContent = `
-                        *, *::before, *::after {
-                            color-scheme: light !important;
-                        }
-                    `;
-                    clonedEl.prepend(styleOverride);
-                },
+            // html-to-image handles oklch natively because it lets the browser render the DOM into an SVG foreignObject
+            const imgData = await toPng(element, {
+                cacheBust: true,
+                pixelRatio: 2,
+                fontEmbedCSS: '' // Use existing loaded fonts
             });
 
+            // Calculate PDF dimensions (using scaled sizes since pixelRatio is 2)
+            const width = element.offsetWidth * 2;
+            const height = element.offsetHeight * 2;
 
-            const imgData = canvas.toDataURL('image/png');
             const pdf = new jsPDF({
                 orientation: 'portrait',
                 unit: 'px',
-                format: [canvas.width, canvas.height]
+                format: [width, height]
             });
 
-            pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+            pdf.addImage(imgData, 'PNG', 0, 0, width, height);
             pdf.save(`Class_Report_${(currentClass?.subject || 'report').replace(/[^a-z0-9]/gi, '_')}.pdf`);
 
-            toast.success("PDF Downloaded successfully!");
-        } catch (error) {
-            console.error(error);
-            toast.error("Failed to generate PDF.", { description: "An unexpected error occurred." });
+            toast.success("PDF Downloaded successfully!", { id: 'pdf-toast' });
+        } catch (error: any) {
+            console.error('PDF Export Error:', error);
+            toast.error("Failed to generate PDF.", { id: 'pdf-toast', description: error?.message || "An unexpected error occurred." });
         } finally {
             setIsExporting(false);
         }
