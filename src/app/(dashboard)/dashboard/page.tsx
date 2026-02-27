@@ -43,7 +43,7 @@ export default function Dashboard() {
 
             {/* Quick Actions Grid */}
             <div className="grid gap-4 sm:grid-cols-2">
-                <Link href="/classes" className="group relative overflow-hidden rounded-2xl bg-white dark:bg-slate-800/80 p-6 shadow-sm ring-1 ring-slate-100 dark:ring-slate-700/50 transition-all hover:shadow-md hover:ring-primary/20 dark:hover:ring-sky-500/30">
+                <Link href="/classes?action=new" className="group relative overflow-hidden rounded-2xl bg-white dark:bg-slate-800/80 p-6 shadow-sm ring-1 ring-slate-100 dark:ring-slate-700/50 transition-all hover:shadow-md hover:ring-primary/20 dark:hover:ring-sky-500/30">
                     <div className="flex items-center gap-4">
                         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 dark:bg-sky-900/30 text-primary dark:text-sky-400 transition-transform group-hover:scale-110">
                             <PlusCircle size={24} />
@@ -55,7 +55,7 @@ export default function Dashboard() {
                     </div>
                 </Link>
 
-                <Link href="/students" className="group relative overflow-hidden rounded-2xl bg-white dark:bg-slate-800/80 p-6 shadow-sm ring-1 ring-slate-100 dark:ring-slate-700/50 transition-all hover:shadow-md hover:ring-primary/20 dark:hover:ring-sky-500/30">
+                <Link href="/students?action=new" className="group relative overflow-hidden rounded-2xl bg-white dark:bg-slate-800/80 p-6 shadow-sm ring-1 ring-slate-100 dark:ring-slate-700/50 transition-all hover:shadow-md hover:ring-primary/20 dark:hover:ring-sky-500/30">
                     <div className="flex items-center gap-4">
                         <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 dark:text-indigo-400 transition-transform group-hover:scale-110">
                             <UserPlus size={24} />
