@@ -20,10 +20,11 @@ export interface ClassroomContext {
 // 3. A Diák Állapot / Kimenet (Amit az Orchestrator ad vissza a Frontendnek)
 export interface StudentResponse {
     studentId: string;
-    spoke: boolean; // Megszólalt-e a diák?
-    message: string | null; // A diák válasza (ha applicable)
+    internalThought: string;
+    action: 'LISTEN' | 'RAISE_HAND' | 'ANSWER_DIRECTLY' | 'WHISPER' | 'INTERRUPT';
+    message: string | null;
     newEngagement: number; // 0-100
-    mood: 'attentive' | 'distracted' | 'confused' | 'excited';
+    emotion: 'curious' | 'bored' | 'anxious' | 'excited';
 }
 
 export interface PreProcessorResponse {
@@ -54,6 +55,8 @@ export interface Student {
     learningStatus: string;
     struggles: string;
     prompt?: string;
+    currentAction?: 'LISTEN' | 'RAISE_HAND' | 'ANSWER_DIRECTLY' | 'WHISPER' | 'INTERRUPT';
+    currentMessage?: string | null;
 }
 
 export interface VirtualClass {

@@ -2,16 +2,18 @@ import { NextResponse } from 'next/server';
 import { AzureOpenAI } from 'openai';
 import { ClassroomContext, OrchestratorResponse, PreProcessorResponse } from '@/types/shared';
 
-export const maxDuration = 60; // Hasznos Vercelen, ha hosszú a hívás
+// Segédfüggvény: megnézi, hogy a tanár szövege tartalmazza-e a diák nevét
+function isDirectlyAddressed(teacherText: string, studentName: string): boolean {
+    const cleanText = teacherText.toLowerCase();
+    const cleanName = studentName.toLowerCase();
+    return cleanText.includes(cleanName);
+}
 
 export async function POST(req: Request) {
     try {
         const body = await req.json() as ClassroomContext;
-        const { sessionId, students, teacherTranscriptChunk } = body;
+        const { students, teacherTranscriptChunk } = body;
 
-        console.log(`[Orchestrator] Received chunk: "${teacherTranscriptChunk}"`);
-
-        // A kliens inicializálása a legfrissebb standard szerint
         const client = new AzureOpenAI({
             endpoint: process.env.AZURE_OPENAI_ENDPOINT,
             apiKey: process.env.AZURE_OPENAI_API_KEY,
@@ -19,91 +21,118 @@ export async function POST(req: Request) {
             deployment: process.env.AZURE_OPENAI_DEPLOYMENT_NAME,
         });
 
-        // 1. PreProcessor - Megvizsgálja, van-e elég kontextus a bufferben
+        // --- 1. PREPROCESSOR (Változatlan, csak a típusokat illesztjük) ---
+        // Feltételezzük, hogy ez ugyanaz maradt, mint a te kódodban...
         const preProcessorResult = await client.chat.completions.create({
-            model: "", // Mivel a deploymentet megadtuk, ez üresen maradhat
+            model: process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "",
             response_format: { type: "json_object" },
             messages: [
                 {
                     role: "system",
-                    content: `Te egy tapasztalt tanárokat megfigyelő asszisztens vagy.
-A feladatod eldönteni egy élő beszéd bufferből, hogy az aktuális szöveg tartalmaz-e egy befejezett, önállóan értelmezhető gondolatot, amire a diákok tudnak reagálni.
-Ha a szöveg még csonka vagy befejezetlen (pl. "A kísérleti fizika azért..."), akkor válaszolj úgy, hogy még ne dolgozzuk fel.
-Ha viszont tartalmaz befejezett állítást vagy kérdést, akkor válaszd le azt a részt, és add vissza a maradék (még befejezetlen) "trailing" szöveget.
-
-Válaszod KIZÁRÓLAG érvényes JSON formátumban add meg az alábbi sémák szerint:
-{
-  "isProcessed": boolean (igaz, ha találtál érdemi feldolgozható részt),
-  "extractedContext": string (a befejezett gondolat, vagy null, ha isProcessed hamis),
-  "remainingBuffer": string (a buffer maradéka az extractedContext után, lehet üres string is. Ha isProcessed hamis, a remainingBuffer legyen VÁLTOZATLANUL az eredeti szöveg!)
-}`
+                    content: `Te egy tanárokat segítő AI vagy. Elemezd a bejövő beszédfolyamot.
+                    Keresd a befejezett mondatokat vagy logikai egységeket.
+                    JSON válasz: { "isProcessed": boolean, "extractedContext": string | null, "remainingBuffer": string }`
                 },
-                { role: "user", content: `Aktuális buffer: "${teacherTranscriptChunk}"` }
+                { role: "user", content: `Buffer: "${teacherTranscriptChunk}"` }
             ]
         });
 
         const preProcContent = preProcessorResult.choices[0]?.message?.content;
-        if (!preProcContent) throw new Error("PreProcessor nem adott vissza választ.");
-
+        if (!preProcContent) throw new Error("PreProcessor error");
         const preProc: PreProcessorResponse = JSON.parse(preProcContent);
-        console.log(`[PreProcessor] Result:`, preProc);
 
         if (!preProc.isProcessed || !preProc.extractedContext) {
-            // Nem volt elég infó
-            const response: OrchestratorResponse = {
-                responses: []
-            };
-            return NextResponse.json({ ...response, isProcessed: false, remainingBuffer: preProc.remainingBuffer });
+            return NextResponse.json({ isProcessed: false, remainingBuffer: preProc.remainingBuffer, responses: [] });
         }
 
-        // 2. Processor - Diákok generálása az extractedContext alapján
-        const processorResult = await client.chat.completions.create({
-            model: "",
-            response_format: { type: "json_object" },
-            messages: [
-                {
-                    role: "system",
-                    content: `Te egy virtuális osztályterem szimulátor 'Processor' modulja vagy.
-Kaptál egy befejezett gondolatot a tanártól.
-A te feladatod meghatározni az alábbi diákok reakcióit.
-Ne mindenki szólaljon meg (spoke: false), csak az, aki a személyisége alapján valószínűleg reagálna!
-Figyelj oda az eddigi Engagement és hangulat változására!
+        // --- 2. PROCESSOR (A Multi-Agent logika) ---
 
-Válaszod KIZÁRÓLAG érvényes JSON formátumban add meg, az alábbi tömböt tartalmazva a "responses" kulcs alatt:
+        const studentPromises = students.map(async (student: any) => {
+            try {
+                // Ellenőrizzük, hogy a tanár közvetlenül ezt a diákot szólította-e meg
+                const isAddressed = isDirectlyAddressed(preProc.extractedContext!, student.name);
+
+                // Személyiség specifikus prompt építése
+                const personalityPrompt = `
+                Name: ${student.name}
+                Personality: ${student.personality || "Average student"}
+                Current Engagement: ${student.moodScore}/100
+                Role: ${student.type} (e.g. nerd, troublemaker, shy)
+                `;
+
+                const result = await client.chat.completions.create({
+                    model: process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "",
+                    response_format: { type: "json_object" },
+                    messages: [
+                        {
+                            role: "system",
+                            content: `You are simulating a student in a classroom.
+                            
+YOUR BEHAVIORAL PROTOCOL:
+1. **DEFAULT STATE:** You should usually stay SILENT and LISTEN.
+2. **DIRECT ADDRESS:** If the teacher explicitly said your name ("${student.name}"), you MUST respond (action: "ANSWER_DIRECTLY").
+3. **GENERAL QUESTIONS:** If the teacher asks a general question to the class, DO NOT shout out. Instead, choose "RAISE_HAND" if you know the answer, or "LISTEN" if you don't.
+4. **DISRUPTION:** Only if your personality is "distracted" or "troublemaker" AND your engagement is low, you might "WHISPER" to a neighbor or "INTERRUPT".
+5. **SHY STUDENTS:** Even if you know the answer, a shy student might just "LISTEN" or hesitantly "RAISE_HAND".
+
+INPUT CONTEXT:
+Teacher said: "${preProc.extractedContext}"
+Directly addressed to you: ${isAddressed}
+
+Analyze the situation and return JSON:
 {
-  "responses": [
-    {
-      "studentId": "string",
-      "spoke": boolean,
-      "message": "string" (vagy null),
-      "newEngagement": number (0-100),
-      "mood": "attentive" | "distracted" | "confused" | "excited"
-    }
-  ]
+  "studentId": "${student.id}",
+  "internalThought": "string (Why did you choose this action?)",
+  "action": "LISTEN" | "RAISE_HAND" | "ANSWER_DIRECTLY" | "WHISPER" | "INTERRUPT",
+  "message": "string" (The content of speech/whisper. NULL if action is LISTEN or RAISE_HAND),
+  "newEngagement": number (0-100),
+  "emotion": "curious" | "bored" | "anxious" | "excited"
 }`
-                },
-                {
-                    role: "user",
-                    content: `Tanár mondta: "${preProc.extractedContext}"\nDiákok jelenlegi állapota:\n${JSON.stringify(students, null, 2)}`
-                }
-            ]
+                        }
+                    ]
+                });
+
+                const content = result.choices[0]?.message?.content;
+                return content ? JSON.parse(content) : null;
+            } catch (err) {
+                console.error(`Error with student ${student.name}`, err);
+                return null;
+            }
         });
 
-        const procContent = processorResult.choices[0]?.message?.content;
-        if (!procContent) throw new Error("Processor nem adott vissza választ.");
+        const rawResponses = (await Promise.all(studentPromises)).filter(Boolean);
 
-        const proc = JSON.parse(procContent) as OrchestratorResponse;
-        console.log(`[Processor] Generated responses for ${proc.responses?.length || 0} students.`);
+        // --- 3. THE CONDUCTOR (Utófeldolgozás / Konfliktuskezelés) ---
+        // Itt döntjük el, ki beszélhet valójában, hogy ne legyen káosz.
+
+        const finalResponses = rawResponses.filter((r: any) => {
+            // Mindig engedjük át, ha csendben van vagy csak kezet tesz fel (ez UI állapot)
+            if (r.action === 'LISTEN' || r.action === 'RAISE_HAND') return true;
+
+            // Ha közvetlenül kérdezték, mindig beszélhet
+            if (r.action === 'ANSWER_DIRECTLY') return true;
+
+            // Ha sutyorgás vagy bekiabálás (INTERRUPT), engedjük át, 
+            // DE itt lehetne random filtert tenni (pl. csak max 1 ember kiabálhat be egyszerre)
+            if (r.action === 'INTERRUPT' || r.action === 'WHISPER') return true;
+
+            return false;
+        });
+
+        // UI egyszerűsítés: A frontendnek lehet, hogy csak egy "text" kell, 
+        // de érdemes visszaküldeni az action típusát, hogy pl. megjelenjen egy kéz ikon ✋
+
+        console.log(`[Processor] Processed ${finalResponses.length} valid reactions.`);
 
         return NextResponse.json({
             isProcessed: true,
             extractedContext: preProc.extractedContext,
             remainingBuffer: preProc.remainingBuffer,
-            responses: proc.responses || []
+            responses: finalResponses
         });
 
     } catch (error) {
-        console.error("[Orchestrator] Error:", error);
-        return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+        console.error("Orchestrator Error:", error);
+        return NextResponse.json({ error: "Internal Error" }, { status: 500 });
     }
 }

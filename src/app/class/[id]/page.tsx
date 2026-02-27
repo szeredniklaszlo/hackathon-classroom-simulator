@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { Play, Square, Save, UserPlus, Hand, ArrowLeft, Clock, Mic, MicOff } from 'lucide-react';
 import Link from 'next/link';
 import { useAzureSTT } from '@/hooks/useAzureSTT';
+import StudentCard from '@/components/classroom/StudentCard';
 
 export default function VirtualClassroom() {
     const params = useParams();
@@ -77,14 +78,26 @@ export default function VirtualClassroom() {
                         if (data.responses && data.responses.length > 0) {
                             setStudents(prev => {
                                 const updated = [...prev];
+
+                                // Először mindenkinek töröljük az előző cselekvését (hogy eltűnjenek a régi szövegbuborékok)
+                                // De a hangulatuk/engagement marad
+                                updated.forEach(s => {
+                                    s.currentAction = 'LISTEN';
+                                    s.currentMessage = null;
+                                    s.raisedHand = false;
+                                });
+
                                 data.responses.forEach((res: any) => {
                                     const idx = updated.findIndex(s => s.id === res.studentId);
                                     if (idx !== -1) {
                                         updated[idx] = {
                                             ...updated[idx],
                                             moodScore: res.newEngagement,
+                                            currentAction: res.action,
+                                            currentMessage: res.message,
+                                            raisedHand: res.action === 'RAISE_HAND',
                                         };
-                                        if (res.spoke && res.message) {
+                                        if (res.action !== 'LISTEN' && res.action !== 'RAISE_HAND' && res.message) {
                                             toast(`${updated[idx].name} says:`, { description: res.message, duration: 4000 });
                                         }
                                     }
@@ -226,32 +239,7 @@ export default function VirtualClassroom() {
                         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 auto-rows-fr h-full place-items-center">
                             <AnimatePresence>
                                 {students.map((student, idx) => (
-                                    <motion.div
-                                        key={student.id}
-                                        initial={{ opacity: 0, scale: 0.9 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.9 }}
-                                        transition={{ delay: idx * 0.05 }}
-                                        className={`h-full w-full max-w-[240px] aspect-square rounded-[2rem] border-2 flex flex-col items-center justify-center p-4 relative shadow-sm transition-all duration-500
-                      ${getMoodBg(student.moodScore)} border-white ring-1 ring-slate-900/5 hover:shadow-md
-                    `}
-                                    >
-                                        {/* Hand Raise Indicator */}
-                                        {student.raisedHand && (
-                                            <div className="absolute -top-3 -right-3 bg-white dark:bg-slate-800 p-2 rounded-full shadow-lg border border-slate-100 dark:border-slate-700 z-10 animate-bounce">
-                                                <Hand className="text-amber-500 fill-amber-100" size={24} />
-                                            </div>
-                                        )}
-
-                                        <div className="text-6xl mb-4 bg-white/50 dark:bg-white/10 w-24 h-24 rounded-full flex items-center justify-center shadow-inner border border-white dark:border-white/10 backdrop-blur-sm">
-                                            {student.emoji}
-                                        </div>
-
-                                        <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur px-4 py-2 rounded-xl text-center shadow-sm w-full border border-white/50 dark:border-slate-700/50">
-                                            <h4 className="font-extrabold text-slate-800 dark:text-slate-100 tracking-tight text-lg">{student.name}</h4>
-                                            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">{student.type} • {student.age}y</p>
-                                        </div>
-                                    </motion.div>
+                                    <StudentCard key={student.id} student={student} idx={idx} />
                                 ))}
                             </AnimatePresence>
                         </div>
