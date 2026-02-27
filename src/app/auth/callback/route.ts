@@ -37,7 +37,12 @@ export async function GET(request: Request) {
 
         if (!error) {
             return NextResponse.redirect(`${origin}${next}`)
+        } else {
+            console.error("Auth session exchange error:", error)
+            return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent(error.message || 'auth_failed')}`)
         }
+    } else {
+        console.error("No code parameter found in the URL. Search parameters:", searchParams.toString())
     }
 
     return NextResponse.redirect(`${origin}/login?error=auth_failed`)
