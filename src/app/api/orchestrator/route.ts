@@ -12,7 +12,7 @@ function isDirectlyAddressed(teacherText: string, studentName: string): boolean 
 export async function POST(req: Request) {
     try {
         const body = await req.json() as ClassroomContext;
-        const { students, teacherTranscriptChunk } = body;
+        const { students, teacherTranscriptChunk, fullTranscript = [] } = body;
 
         const client = new AzureOpenAI({
             endpoint: process.env.AZURE_OPENAI_ENDPOINT,
@@ -29,9 +29,12 @@ export async function POST(req: Request) {
             messages: [
                 {
                     role: "system",
-                    content: `Te egy tanárokat segítő AI vagy. Elemezd a bejövő beszédfolyamot.
-                    Keresd a befejezett mondatokat vagy logikai egységeket.
-                    JSON válasz: { "isProcessed": boolean, "extractedContext": string | null, "remainingBuffer": string }`
+                    content: `Te egy tanárokat segítő AI vagy. Elemezd a bejövő Speech-to-Text beszédfolyamot (Buffer).
+A feladatod, hogy eldöntsd, a tanár mondandója elérte-e azt a pontot, amire a diákoknak reagálniuk kellene (pl. feltett egy kérdést, felszólított valakit, vagy befejezett egy gondolatmenetet).
+Ha IGEN (kérdés, utasítás, befejezett mondat), akkor isProcessed = true, az extractedContext az értelmes mondat, a remainingBuffer pedig a mondaton túli maradék szöveg (többnyire "").
+Ha MÉG NEM fejezett be semmit (pl. csak "Um, so..."), akkor isProcessed = false, extractedContext = null.
+Fontos: A szöveg tartalmazhat töltelékszavakat (um, uh). Ha a szövegben van egy kérdés (pl. "what do you think?"), az mindig feldolgozandó (isProcessed: true)!
+Kimenet csak valid JSON: { "isProcessed": boolean, "extractedContext": string | null, "remainingBuffer": string }`
                 },
                 { role: "user", content: `Buffer: "${teacherTranscriptChunk}"` }
             ]
@@ -44,6 +47,9 @@ export async function POST(req: Request) {
         if (!preProc.isProcessed || !preProc.extractedContext) {
             return NextResponse.json({ isProcessed: false, remainingBuffer: preProc.remainingBuffer, responses: [] });
         }
+
+        // Token spórolás: Az utolsó pár üzenetet rakjuk a promptba
+        const recentHistory = fullTranscript.slice(-8).map(entry => `[${entry.speaker}]: ${entry.text}`).join('\n');
 
         // --- 2. PROCESSOR (A Multi-Agent logika) ---
 
@@ -58,7 +64,7 @@ export async function POST(req: Request) {
 
                     const basePersona = student.prompt
                         ? `YOUR DETAILED SYSTEM PERSONA:\n${student.prompt}\n\nCURRENT STATE:\nCurrent Engagement/Mood: ${student.moodScore}/100`
-                        : `Name: ${student.name}\nPersonality: ${student.personality || "Average student"}\nCurrent Engagement: ${student.moodScore}/100\nRole: ${student.type} (e.g. nerd, troublemaker, shy)`;
+                        : `Name: ${student.name}\nAge: ${student.age}\nPersonality: ${student.personality || "Average student"}\nCurrent Engagement: ${student.moodScore}/100\nRole: ${student.type} (e.g. nerd, troublemaker, shy)`;
 
                     const result = await client.chat.completions.create({
                         model: process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "",
@@ -73,12 +79,21 @@ ${basePersona}
 YOUR BEHAVIORAL PROTOCOL (CRITICAL RULES):
 1. **DEFAULT STATE:** You should usually stay SILENT and LISTEN.
 2. **DIRECT ADDRESS:** If the teacher explicitly said your name ("${student.name}"), you MUST respond (action: "ANSWER_DIRECTLY").
-3. **DISRUPTION:** Only if your personality (as described above) is distracted or a troublemaker AND your engagement is low, you might "WHISPER" to a neighbor or "INTERRUPT". Let your specific conditions dictate if you interrupt or whisper.
-4. **SHY/ANXIOUS:** Even if you know the answer, if you are shy or anxious according to your persona, you might just "LISTEN" or hesitantly "RAISE_HAND".
+3. **GENERAL QUESTIONS:** If the teacher asks a general question to the class, DO NOT shout out. Instead, choose "RAISE_HAND" if you know the answer, or "LISTEN" if you don't.
+4. **DISRUPTION:** Only if your personality (as described above) is distracted or a troublemaker AND your engagement is low, you might "WHISPER" to a neighbor or "INTERRUPT". Let your specific conditions dictate if you interrupt or whisper.
+5. **SHY/ANXIOUS:** Even if you know the answer, if you are shy or anxious according to your persona, you might just "LISTEN" or hesitantly "RAISE_HAND".
+6. **BE AN ACTUAL KID:** You are a student in a classroom, not a robot. You should act like a real kid, not a robot, so your answers can allow mistakes and "I don't know"-ish responses.
 
 INPUT CONTEXT:
+
+--- RECENT CLASSROOM HISTORY ---
+${recentHistory || "(Classroom just started, no prior history)"}
+--------------------------------
+
+--- LATEST TEACHER INPUT (Just spoken now) ---
 Teacher said: "${preProc.extractedContext}"
 Directly addressed to you: ${isAddressed}
+----------------------------------------------
 
 Analyze the situation and return JSON:
 {
