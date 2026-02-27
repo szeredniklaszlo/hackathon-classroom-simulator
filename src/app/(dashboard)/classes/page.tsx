@@ -93,6 +93,18 @@ export default function ClassesPage() {
         setIsDrawerOpen(true);
     };
 
+    // Auto-open drawer if ?action=new is in URL
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('action') === 'new') {
+                openCreateDrawer();
+                // Clean up URL to prevent re-opening on manual refresh
+                window.history.replaceState({}, '', window.location.pathname);
+            }
+        }
+    }, [students.length, classes.length]); // Wait for initial data load to be safe
+
     const closeDrawer = () => {
         setIsDrawerOpen(false);
         // Delay clearing state to allow close animation

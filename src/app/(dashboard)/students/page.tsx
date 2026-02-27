@@ -62,6 +62,7 @@ export default function StudentsPage() {
     const [conflictLevel, setConflictLevel] = useState(20);
     const [attentionSpan, setAttentionSpan] = useState(50);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isAIGenerating, setIsAIGenerating] = useState(false);
 
     // Validation State
     const [ageError, setAgeError] = useState('');
@@ -79,6 +80,18 @@ export default function StudentsPage() {
         setAgeError('');
         setIsDrawerOpen(true);
     };
+
+    // Auto-open drawer if ?action=new is in URL
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('action') === 'new') {
+                openCreateDrawer();
+                // Clean up URL to prevent re-opening on manual refresh
+                window.history.replaceState({}, '', window.location.pathname);
+            }
+        }
+    }, [students.length]); // Wait for initial data load to be safe
 
     const closeDrawer = () => {
         setIsDrawerOpen(false);
@@ -174,6 +187,45 @@ export default function StudentsPage() {
         }
     };
 
+    const generateAIPersonaDirect = async () => {
+        setIsAIGenerating(true);
+        toast.info("Generating AI Persona...", { id: "ai-gen" });
+        try {
+            const response = await fetch('/api/students/generate', { method: 'POST' });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to generate persona');
+            }
+
+            const data = await response.json();
+
+            if (data.student) {
+                const generated = data.student;
+                const newStudent: Student = {
+                    id: generated.id,
+                    name: generated.name,
+                    age: generated.age,
+                    type: generated.type,
+                    condition: generated.condition,
+                    personality: generated.personality,
+                    created_at: generated.created_at || new Date().toISOString(),
+                    emoji: generated.emoji,
+                    moodScore: 50 + Math.floor(Math.random() * 30),
+                    raisedHand: false,
+                    learningStatus: 'Awaiting first lesson...',
+                };
+
+                addStudent(newStudent);
+                toast.success('AI Persona Generated!', { id: "ai-gen", description: `${newStudent.name} has been added.` });
+            }
+        } catch (err: any) {
+            console.error(err);
+            toast.error('Generation failed', { id: "ai-gen", description: err.message });
+        } finally {
+            setIsAIGenerating(false);
+        }
+    };
+
     const sortedStudents = useMemo(() => {
         return [...students].sort((a, b) => {
             if (sortOption === 'name') {
@@ -198,13 +250,23 @@ export default function StudentsPage() {
                     <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Student Personas</h1>
                     <p className="mt-1 text-slate-500 dark:text-slate-400">Manage and create AI-driven student profiles.</p>
                 </div>
-                <button
-                    onClick={openCreateDrawer}
-                    className="flex items-center gap-2 rounded-xl bg-indigo-500 dark:bg-indigo-600 px-4 py-2 font-medium text-white shadow-sm transition-all hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:shadow-md active:scale-95"
-                >
-                    <Sparkles size={18} />
-                    Generate Persona
-                </button>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={openCreateDrawer}
+                        className="flex items-center gap-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-2 font-medium text-slate-700 dark:text-slate-300 shadow-sm transition-all hover:bg-slate-50 dark:hover:bg-slate-700/50 active:scale-95"
+                    >
+                        <UserPlus size={18} />
+                        New Persona
+                    </button>
+                    <button
+                        onClick={generateAIPersonaDirect}
+                        disabled={isAIGenerating}
+                        className="flex items-center gap-2 rounded-xl bg-indigo-500 dark:bg-indigo-600 px-4 py-2 font-medium text-white shadow-sm transition-all hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:shadow-md active:scale-95 disabled:opacity-70 disabled:active:scale-100 disabled:cursor-not-allowed"
+                    >
+                        {isAIGenerating ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
+                        {isAIGenerating ? 'Generating...' : 'Generate Persona'}
+                    </button>
+                </div>
             </div>
 
             {/* Controls Bar */}
