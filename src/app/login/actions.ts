@@ -43,7 +43,7 @@ export async function signup(formData: FormData) {
 
     // Ha a Supabase email megerősítést kér (alapértelmezett viselkedés)
     if (!authData.session) {
-        redirect(`/login?error=${encodeURIComponent('Sikeres regisztráció! Kérlek erősítsd meg az email címedet a kiküldött levélben szereplő linkkel.')}`)
+        redirect(`/login?error=${encodeURIComponent('Successful registration! Please confirm your email address using the link provided in the email.')}`)
     }
 
     revalidatePath('/', 'layout')

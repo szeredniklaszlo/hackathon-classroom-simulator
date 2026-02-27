@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useStore } from '@/store/useStore';
 import { Student, StudentType } from '@/types/shared';
-import { UserPlus, X, Sparkles, AlertCircle, Loader2, ArrowDownAZ, Clock } from 'lucide-react';
+import { UserPlus, X, Sparkles, AlertCircle, Loader2, ArrowDownAZ, Clock, Save } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function StudentsPage() {
@@ -39,7 +39,7 @@ export default function StudentsPage() {
                 setStudents(mappedStudents);
             } catch (error) {
                 console.error("Error fetching students:", error);
-                toast.error('Hiba történt a diákok betöltésekor.');
+                toast.error('Error loading students.');
             } finally {
                 setIsLoadingStudents(false);
             }
@@ -65,6 +65,7 @@ export default function StudentsPage() {
     const [isAIGenerating, setIsAIGenerating] = useState(false);
 
     // Validation State
+    const [nameError, setNameError] = useState('');
     const [ageError, setAgeError] = useState('');
 
     const openCreateDrawer = () => {
@@ -78,6 +79,7 @@ export default function StudentsPage() {
         setConflictLevel(20);
         setAttentionSpan(50);
         setAgeError('');
+        setNameError('');
         setIsDrawerOpen(true);
     };
 
@@ -114,12 +116,14 @@ export default function StudentsPage() {
 
         // Validation
         if (!newName.trim()) {
-            toast.error('Név megadása kötelező!');
+            setNameError('Name is required!');
             isValid = false;
+        } else {
+            setNameError('');
         }
 
         if (newAge === '' || newAge < 6 || newAge > 18) {
-            setAgeError('Kor csak 6 és 18 közötti szám lehet!');
+            setAgeError('Age must be between 6 and 18!');
             isValid = false;
         } else {
             setAgeError('');
@@ -173,13 +177,13 @@ export default function StudentsPage() {
             };
 
             addStudent(newStudent);
-            toast.success('Diák sikeresen generálva és elmentve!', {
+            toast.success('Student successfully generated and saved!', {
                 description: `${newName} added to the persona pool.`,
             });
             closeDrawer();
         } catch (error: any) {
             console.error("Failed to save student:", error);
-            toast.error('Hiba történt a mentés során.', {
+            toast.error('An error occurred while saving.', {
                 description: error.message,
             });
         } finally {
@@ -358,9 +362,9 @@ export default function StudentsPage() {
             >
                 <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 p-6">
                     <div className="flex items-center gap-2">
-                        <Sparkles className="text-indigo-500 dark:text-indigo-400" size={20} />
+                        <UserPlus className="text-secondary dark:text-sky-400" size={20} />
                         <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                            Generate Persona
+                            Create New Persona
                         </h2>
                     </div>
                     <button
@@ -381,10 +385,18 @@ export default function StudentsPage() {
                                 <input
                                     type="text"
                                     value={newName}
-                                    onChange={(e) => setNewName(e.target.value)}
+                                    onChange={(e) => { setNewName(e.target.value); if (nameError) setNameError(''); }}
                                     placeholder="e.g. Liam"
-                                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent dark:bg-slate-900/50 dark:text-slate-100 px-4 py-2.5 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 dark:focus:ring-indigo-500/20"
+                                    className={`w-full rounded-xl border bg-transparent dark:bg-slate-900/50 dark:text-slate-100 px-4 py-2.5 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:ring-2 ${nameError
+                                        ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20'
+                                        : 'border-slate-200 dark:border-slate-700 focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-indigo-500/20 dark:focus:ring-indigo-500/20'
+                                        }`}
                                 />
+                                {nameError && (
+                                    <p className="mt-1 text-xs text-red-500 font-medium">
+                                        {nameError}
+                                    </p>
+                                )}
                             </div>
                             <div className="col-span-1">
                                 <label className="mb-1.5 block text-sm font-semibold text-slate-900 dark:text-slate-200">Emoji *</label>
@@ -409,7 +421,7 @@ export default function StudentsPage() {
                                 }}
                                 onBlur={() => {
                                     if (newAge !== '' && (newAge < 6 || newAge > 18)) {
-                                        setAgeError('Kor csak 6 és 18 közötti szám lehet!');
+                                        setAgeError('Age must be between 6 and 18!');
                                     }
                                 }}
                                 placeholder="Age (6-18)"
@@ -548,12 +560,9 @@ export default function StudentsPage() {
                         disabled={isGenerating}
                         className="flex w-full justify-center items-center gap-2 rounded-xl bg-indigo-500 dark:bg-indigo-600 py-3 font-semibold text-white shadow-sm transition-all hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:shadow-md active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
                     >
-                        <Sparkles size={18} />
-                        {isGenerating ? 'Saving...' : 'Generate AI Persona'}
+                        <Save size={18} />
+                        {isGenerating ? 'Saving...' : 'Save Persona'}
                     </button>
-                    <p className="mt-3 text-center text-xs text-slate-400 dark:text-slate-500">
-                        This immediately creates a prompt context for the LLM.
-                    </p>
                 </div>
             </div>
         </div>

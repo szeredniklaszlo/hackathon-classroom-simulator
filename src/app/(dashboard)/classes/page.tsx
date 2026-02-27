@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { VirtualClass, Student } from '@/types/shared';
-import { Users, Plus, X, BookOpen, Clock, Activity, Search, PlayCircle, Loader2 } from 'lucide-react';
+import { Users, Plus, Minus, X, BookOpen, Clock, Activity, Search, PlayCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ClassesPage() {
@@ -29,7 +29,7 @@ export default function ClassesPage() {
                 }
             } catch (error) {
                 console.error("Error fetching data:", error);
-                toast.error('Hiba történt az adatok betöltésekor.');
+                toast.error('Error loading data.');
             } finally {
                 setIsLoading(false);
             }
@@ -75,7 +75,12 @@ export default function ClassesPage() {
     const [newName, setNewName] = useState('');
     const [newSubject, setNewSubject] = useState('');
     const [newEmoji, setNewEmoji] = useState('🎓');
-    const [selectedStudentIds, setSelectedStudentIds] = useState<Set<string>>(new Set());
+    const [selectedStudentCounts, setSelectedStudentCounts] = useState<Record<string, number>>({});
+
+    // Validation states
+    const [nameError, setNameError] = useState('');
+    const [subjectError, setSubjectError] = useState('');
+    const [studentError, setStudentError] = useState('');
 
     const openViewDrawer = (vClass: VirtualClass) => {
         setSelectedClass(vClass);
@@ -87,8 +92,11 @@ export default function ClassesPage() {
         setNewName('');
         setNewSubject('');
         setNewEmoji('🎓');
-        setSelectedStudentIds(new Set());
+        setSelectedStudentCounts({});
         setSearchQuery('');
+        setNameError('');
+        setSubjectError('');
+        setStudentError('');
         setDrawerMode('create');
         setIsDrawerOpen(true);
     };
@@ -112,20 +120,95 @@ export default function ClassesPage() {
     };
 
     const toggleStudentSelection = (id: string) => {
-        const next = new Set(selectedStudentIds);
-        if (next.has(id)) next.delete(id);
-        else next.add(id);
-        setSelectedStudentIds(next);
+        const next = { ...selectedStudentCounts };
+        if (next[id]) {
+            delete next[id];
+        } else {
+            next[id] = 1;
+        }
+        setSelectedStudentCounts(next);
+        if (studentError) setStudentError('');
+    };
+
+    const updateStudentCount = (e: React.MouseEvent, id: string, delta: number) => {
+        e.stopPropagation();
+        const next = { ...selectedStudentCounts };
+        if (next[id]) {
+            const newCount = next[id] + delta;
+            if (newCount >= 1) {
+                next[id] = newCount;
+                setSelectedStudentCounts(next);
+            }
+        }
     };
 
     const [isGenerating, setIsGenerating] = useState(false);
 
     const handleCreateClass = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newName || !newSubject) return;
+
+        let hasError = false;
+
+        if (!newName.trim()) {
+            setNameError('Name is required!');
+            hasError = true;
+        } else {
+            setNameError('');
+        }
+
+        if (!newSubject.trim()) {
+            setSubjectError('Subject is required!');
+            hasError = true;
+        } else {
+            setSubjectError('');
+        }
+
+        const totalSelected = Object.entries(selectedStudentCounts).reduce((acc, [_, count]) => acc + count, 0);
+        if (totalSelected === 0) {
+            setStudentError('Please select at least one student!');
+            hasError = true;
+        } else {
+            setStudentError('');
+        }
+
+        if (hasError) return;
 
         setIsGenerating(true);
-        const classStudents = students.filter(s => selectedStudentIds.has(s.id));
+        const classStudents: Student[] = [];
+        Object.entries(selectedStudentCounts).forEach(([studentId, count]) => {
+            const baseStudent = students.find(s => s.id === studentId);
+            if (baseStudent) {
+                if (count === 1) {
+                    classStudents.push({ ...baseStudent });
+                } else {
+                    const fallbackNames = ['Liam', 'Emma', 'Noah', 'Olivia', 'William', 'Ava', 'James', 'Isabella', 'Oliver', 'Sophia', 'Benjamin', 'Mia', 'Elijah', 'Charlotte', 'Lucas', 'Amelia', 'Mason', 'Harper', 'Logan', 'Evelyn', 'Alexander', 'Abigail', 'Michael', 'Emily', 'Ethan', 'Elizabeth', 'Daniel', 'Mila', 'Matthew', 'Ella', 'Henry', 'Avery', 'Jackson', 'Sofia', 'Sebastian', 'Camila', 'Aiden', 'Aria', 'David', 'Scarlett', 'Joseph', 'Victoria', 'Carter', 'Madison', 'Owen', 'Luna', 'Wyatt', 'Grace'];
+                    const usedNames = new Set<string>();
+                    usedNames.add(baseStudent.name);
+
+                    for (let i = 1; i <= count; i++) {
+                        let newName = baseStudent.name;
+                        if (i > 1) {
+                            let retries = 0;
+                            do {
+                                newName = fallbackNames[Math.floor(Math.random() * fallbackNames.length)];
+                                retries++;
+                            } while (usedNames.has(newName) && retries < 10);
+
+                            if (usedNames.has(newName)) {
+                                newName = `${newName} ${i}`;
+                            }
+                            usedNames.add(newName);
+                        }
+
+                        classStudents.push({
+                            ...baseStudent,
+                            id: `${baseStudent.id}-${i}`,
+                            name: newName
+                        });
+                    }
+                }
+            }
+        });
 
         try {
             const response = await fetch('/api/classes', {
@@ -148,13 +231,13 @@ export default function ClassesPage() {
             const { virtualClass: newClass } = await response.json();
 
             addClass(newClass);
-            toast.success('Osztály sikeresen mentve!', {
+            toast.success('Class saved successfully!', {
                 description: `${newName} added to your active cohorts.`,
             });
             closeDrawer();
         } catch (error: any) {
             console.error("Failed to save class:", error);
-            toast.error('Hiba történt a mentés során.', {
+            toast.error('An error occurred while saving.', {
                 description: error.message,
             });
         } finally {
@@ -272,8 +355,8 @@ export default function ClassesPage() {
                             <div>
                                 <h4 className="mb-3 font-bold text-slate-900 dark:text-slate-100">Roster ({selectedClass.students?.length || 0})</h4>
                                 <div className="space-y-2">
-                                    {(selectedClass.students || []).map(student => (
-                                        <div key={student.id} className="flex items-center gap-3 rounded-lg border border-slate-100 dark:border-slate-800 p-2">
+                                    {(selectedClass.students || []).map((student, idx) => (
+                                        <div key={`${student.id}-${idx}`} className="flex items-center gap-3 rounded-lg border border-slate-100 dark:border-slate-800 p-2">
                                             <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 text-xl">
                                                 {student.emoji}
                                             </div>
@@ -289,34 +372,48 @@ export default function ClassesPage() {
                     )}
 
                     {drawerMode === 'create' && (
-                        <form id="create-class-form" onSubmit={handleCreateClass} className="space-y-6">
+                        <form id="create-class-form" onSubmit={handleCreateClass} noValidate className="space-y-6">
                             <div className="space-y-4">
                                 <div>
-                                    <label className="mb-1.5 block text-sm font-semibold text-slate-900 dark:text-slate-200">Class Name</label>
+                                    <label className="mb-1.5 block text-sm font-semibold text-slate-900 dark:text-slate-200">Class Name *</label>
                                     <input
-                                        required
                                         type="text"
                                         value={newName}
-                                        onChange={(e) => setNewName(e.target.value)}
+                                        onChange={(e) => { setNewName(e.target.value); if (nameError) setNameError(''); }}
                                         placeholder="e.g. 10th Grade Honors"
-                                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent dark:bg-slate-900/50 dark:text-slate-100 px-4 py-2.5 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-primary dark:focus:border-sky-500 focus:ring-2 focus:ring-primary/20 dark:focus:ring-sky-500/20"
+                                        className={`w-full rounded-xl border bg-transparent dark:bg-slate-900/50 dark:text-slate-100 px-4 py-2.5 outline-none transition-all focus:ring-2 ${nameError
+                                            ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20'
+                                            : 'border-slate-200 dark:border-slate-700 focus:border-primary dark:focus:border-sky-500 focus:ring-primary/20 dark:focus:ring-sky-500/20'
+                                            }`}
                                     />
+                                    {nameError && (
+                                        <p className="mt-1 text-xs text-red-500 font-medium">
+                                            {nameError}
+                                        </p>
+                                    )}
                                 </div>
 
                                 <div>
-                                    <label className="mb-1.5 block text-sm font-semibold text-slate-900 dark:text-slate-200">Subject / Era</label>
+                                    <label className="mb-1.5 block text-sm font-semibold text-slate-900 dark:text-slate-200">Subject / Era *</label>
                                     <input
-                                        required
                                         type="text"
                                         value={newSubject}
-                                        onChange={(e) => setNewSubject(e.target.value)}
+                                        onChange={(e) => { setNewSubject(e.target.value); if (subjectError) setSubjectError(''); }}
                                         placeholder="e.g. Chemistry: Thermodynamics"
-                                        className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent dark:bg-slate-900/50 dark:text-slate-100 px-4 py-2.5 outline-none transition-all placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:border-primary dark:focus:border-sky-500 focus:ring-2 focus:ring-primary/20 dark:focus:ring-sky-500/20"
+                                        className={`w-full rounded-xl border bg-transparent dark:bg-slate-900/50 dark:text-slate-100 px-4 py-2.5 outline-none transition-all focus:ring-2 ${subjectError
+                                            ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20'
+                                            : 'border-slate-200 dark:border-slate-700 focus:border-primary dark:focus:border-sky-500 focus:ring-primary/20 dark:focus:ring-sky-500/20'
+                                            }`}
                                     />
+                                    {subjectError && (
+                                        <p className="mt-1 text-xs text-red-500 font-medium">
+                                            {subjectError}
+                                        </p>
+                                    )}
                                 </div>
 
                                 <div>
-                                    <label className="mb-1.5 block text-sm font-semibold text-slate-900 dark:text-slate-200">Class Emoji</label>
+                                    <label className="mb-1.5 block text-sm font-semibold text-slate-900 dark:text-slate-200">Class Emoji *</label>
                                     <input
                                         required
                                         type="text"
@@ -329,8 +426,13 @@ export default function ClassesPage() {
 
                             <div className="border-t border-slate-100 dark:border-slate-800 pt-6">
                                 <div className="mb-3 flex items-center justify-between">
-                                    <label className="block text-sm font-semibold text-slate-900 dark:text-slate-200">Select Students</label>
-                                    <span className="text-xs font-medium text-primary dark:text-sky-400">{selectedStudentIds.size} selected</span>
+                                    <div className="flex flex-col">
+                                        <label className={`block text-sm font-semibold ${studentError ? 'text-red-500' : 'text-slate-900 dark:text-slate-200'}`}>Select Students *</label>
+                                        {studentError && <span className="text-xs text-red-500">{studentError}</span>}
+                                    </div>
+                                    <span className="text-xs font-medium text-primary dark:text-sky-400">
+                                        {Object.entries(selectedStudentCounts).reduce((acc, [_, count]) => acc + count, 0)} total
+                                    </span>
                                 </div>
                                 <div className="mb-4 relative">
                                     <input
@@ -349,7 +451,8 @@ export default function ClassesPage() {
                                         </div>
                                     )}
                                     {searchResults.map(student => {
-                                        const isSelected = selectedStudentIds.has(student.id);
+                                        const count = selectedStudentCounts[student.id];
+                                        const isSelected = count !== undefined;
                                         return (
                                             <button
                                                 type="button"
@@ -367,9 +470,31 @@ export default function ClassesPage() {
                                                         </span>
                                                     )}
                                                 </div>
-                                                <div className={`flex h-5 w-5 items-center justify-center rounded border ${isSelected ? 'border-primary dark:border-sky-500 bg-primary dark:bg-sky-500 text-white' : 'border-slate-300 dark:border-slate-600'
-                                                    }`}>
-                                                    {isSelected && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3 h-3"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+                                                <div className="flex items-center gap-2">
+                                                    {isSelected && (
+                                                        <div className="flex items-center gap-2 mr-2 bg-white dark:bg-slate-800 rounded-md shadow-sm border border-primary/20 p-0.5" onClick={(e) => e.stopPropagation()}>
+                                                            <button
+                                                                type="button"
+                                                                onClick={(e) => updateStudentCount(e, student.id, -1)}
+                                                                disabled={count <= 1}
+                                                                className={`p-1 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 transition-colors ${count <= 1 ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                            >
+                                                                <Minus size={12} />
+                                                            </button>
+                                                            <span className="text-xs font-bold w-4 text-center dark:text-slate-200">{count}</span>
+                                                            <button
+                                                                type="button"
+                                                                onClick={(e) => updateStudentCount(e, student.id, 1)}
+                                                                className="p-1 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 transition-colors"
+                                                            >
+                                                                <Plus size={12} />
+                                                            </button>
+                                                        </div>
+                                                    )}
+                                                    <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded border ${isSelected ? 'border-primary dark:border-sky-500 bg-primary dark:bg-sky-500 text-white' : 'border-slate-300 dark:border-slate-600'
+                                                        }`}>
+                                                        {isSelected && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3 h-3"><polyline points="20 6 9 17 4 12"></polyline></svg>}
+                                                    </div>
                                                 </div>
                                             </button>
                                         );
