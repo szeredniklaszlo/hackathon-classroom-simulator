@@ -362,7 +362,11 @@ export default function ClassesPage() {
                                             </div>
                                             <div className="flex-1">
                                                 <div className="font-semibold text-slate-900 dark:text-slate-100">{student.name}</div>
-                                                <div className="text-xs text-slate-500 dark:text-slate-400">{student.type}</div>
+                                                {student.condition && (
+                                                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                                                        {student.condition.split(',').map(c => c.trim()).join(', ')}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     ))}
