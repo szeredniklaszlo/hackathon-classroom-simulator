@@ -38,10 +38,38 @@ export default function ClassesPage() {
         fetchData();
     }, [setClasses, setStudents]);
 
-    // Drawer State
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
     const [drawerMode, setDrawerMode] = useState<'view' | 'create'>('view');
     const [selectedClass, setSelectedClass] = useState<VirtualClass | null>(null);
+
+    // Search and filtering
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState<Student[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
+
+    useEffect(() => {
+        setSearchResults(students);
+    }, [students]);
+
+    useEffect(() => {
+        const handleSearch = async () => {
+            setIsSearching(true);
+            try {
+                const response = await fetch(`/api/students?q=${encodeURIComponent(searchQuery)}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setSearchResults(data.students);
+                }
+            } catch (error) {
+                console.error("Search failed:", error);
+            } finally {
+                setIsSearching(false);
+            }
+        };
+
+        const timeoutId = setTimeout(handleSearch, 300);
+        return () => clearTimeout(timeoutId);
+    }, [searchQuery]);
 
     // Form State for creating a class
     const [newName, setNewName] = useState('');
@@ -60,6 +88,7 @@ export default function ClassesPage() {
         setNewSubject('');
         setNewEmoji('🎓');
         setSelectedStudentIds(new Set());
+        setSearchQuery('');
         setDrawerMode('create');
         setIsDrawerOpen(true);
     };
@@ -292,16 +321,22 @@ export default function ClassesPage() {
                                     <span className="text-xs font-medium text-primary dark:text-sky-400">{selectedStudentIds.size} selected</span>
                                 </div>
                                 <div className="mb-4 relative">
-                                    <Search className="absolute left-3 top-2.5 text-slate-400 dark:text-slate-500" size={16} />
                                     <input
                                         type="text"
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
                                         placeholder="Filter personas..."
                                         className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 py-2 pl-9 pr-4 text-sm outline-none transition-colors dark:text-slate-100 dark:placeholder:text-slate-500 focus:border-primary dark:focus:border-sky-500 focus:bg-white dark:focus:bg-slate-900"
                                     />
                                 </div>
 
-                                <div className="h-[240px] space-y-2 overflow-y-auto rounded-xl border border-slate-100 dark:border-slate-800 p-2">
-                                    {students.map(student => {
+                                <div className="h-[240px] space-y-2 overflow-y-auto rounded-xl border border-slate-100 dark:border-slate-800 p-2 relative">
+                                    {isSearching && (
+                                        <div className="absolute inset-0 bg-white/50 dark:bg-slate-900/50 flex items-center justify-center z-10 backdrop-blur-[1px]">
+                                            <Loader2 className="h-6 w-6 animate-spin text-primary dark:text-sky-400" />
+                                        </div>
+                                    )}
+                                    {searchResults.map(student => {
                                         const isSelected = selectedStudentIds.has(student.id);
                                         return (
                                             <button
@@ -314,6 +349,11 @@ export default function ClassesPage() {
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-xl">{student.emoji}</span>
                                                     <span className="font-semibold text-slate-900 dark:text-slate-100">{student.name}</span>
+                                                    {student.condition && (
+                                                        <span className="bg-indigo-50 dark:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300 text-[10px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded-md truncate max-w-[100px]">
+                                                            {student.condition}
+                                                        </span>
+                                                    )}
                                                 </div>
                                                 <div className={`flex h-5 w-5 items-center justify-center rounded border ${isSelected ? 'border-primary dark:border-sky-500 bg-primary dark:bg-sky-500 text-white' : 'border-slate-300 dark:border-slate-600'
                                                     }`}>
