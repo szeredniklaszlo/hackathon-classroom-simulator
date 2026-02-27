@@ -7,29 +7,36 @@ import { Users, Plus, X, BookOpen, Clock, Activity, Search, PlayCircle, Loader2 
 import { toast } from 'sonner';
 
 export default function ClassesPage() {
-    const { classes, students, addClass, setClasses } = useStore();
+    const { classes, students, addClass, setClasses, setStudents } = useStore();
     const [isLoading, setIsLoading] = useState(true);
 
-    // Fetch classes on mount
+    // Fetch classes and students on mount
     useEffect(() => {
-        const fetchClasses = async () => {
+        const fetchData = async () => {
             try {
-                const response = await fetch('/api/classes');
-                if (!response.ok) {
-                    throw new Error('Failed to fetch classes');
+                const [classesRes, studentsRes] = await Promise.all([
+                    fetch('/api/classes'),
+                    fetch('/api/students')
+                ]);
+
+                if (classesRes.ok) {
+                    const data = await classesRes.json();
+                    setClasses(data.classes);
                 }
-                const data = await response.json();
-                setClasses(data.classes);
+                if (studentsRes.ok) {
+                    const data = await studentsRes.json();
+                    setStudents(data.students);
+                }
             } catch (error) {
-                console.error("Error fetching classes:", error);
-                toast.error('Hiba történt az osztályok betöltésekor.');
+                console.error("Error fetching data:", error);
+                toast.error('Hiba történt az adatok betöltésekor.');
             } finally {
                 setIsLoading(false);
             }
         };
 
-        fetchClasses();
-    }, [setClasses]);
+        fetchData();
+    }, [setClasses, setStudents]);
 
     // Drawer State
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -304,14 +311,9 @@ export default function ClassesPage() {
                                                 className={`flex w-full items-center justify-between rounded-lg p-3 transition-colors ${isSelected ? 'bg-blue-50/50 dark:bg-sky-900/30 ring-1 ring-primary/30 dark:ring-sky-500/30' : 'hover:bg-slate-50 dark:hover:bg-slate-800/80'
                                                     }`}
                                             >
-                                                <div className="flex items-center gap-3">
-                                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 text-xl">
-                                                        {student.emoji}
-                                                    </div>
-                                                    <div className="text-left">
-                                                        <div className="font-semibold text-slate-900 dark:text-slate-100">{student.name}</div>
-                                                        <div className="text-xs text-slate-500 dark:text-slate-400">{student.type}</div>
-                                                    </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xl">{student.emoji}</span>
+                                                    <span className="font-semibold text-slate-900 dark:text-slate-100">{student.name}</span>
                                                 </div>
                                                 <div className={`flex h-5 w-5 items-center justify-center rounded border ${isSelected ? 'border-primary dark:border-sky-500 bg-primary dark:bg-sky-500 text-white' : 'border-slate-300 dark:border-slate-600'
                                                     }`}>
