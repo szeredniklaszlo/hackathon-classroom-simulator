@@ -1,13 +1,49 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { Student, StudentType } from '@/types/shared';
-import { UserPlus, X, Sparkles, AlertCircle } from 'lucide-react';
+import { UserPlus, X, Sparkles, AlertCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function StudentsPage() {
-    const { students, addStudent } = useStore();
+    const { students, addStudent, setStudents } = useStore();
+    const [isLoadingStudents, setIsLoadingStudents] = useState(true);
+
+    // Fetch students on mount
+    useEffect(() => {
+        const fetchStudents = async () => {
+            try {
+                const response = await fetch('/api/students');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch students');
+                }
+                const data = await response.json();
+
+                // Map DB data to local Student interface
+                const mappedStudents: Student[] = data.students.map((dbStudent: any) => ({
+                    id: dbStudent.id,
+                    name: dbStudent.name,
+                    age: dbStudent.age,
+                    type: dbStudent.type,
+                    emoji: dbStudent.emoji,
+                    moodScore: 50 + Math.floor(Math.random() * 30), // generic random starting mood
+                    raisedHand: false,
+                    learningStatus: 'Awaiting first lesson...',
+                    struggles: 'Needs continuous motivation.', // generic fallback since we don't fetch conflictLevel
+                }));
+
+                setStudents(mappedStudents);
+            } catch (error) {
+                console.error("Error fetching students:", error);
+                toast.error('Hiba történt a diákok betöltésekor.');
+            } finally {
+                setIsLoadingStudents(false);
+            }
+        };
+
+        fetchStudents();
+    }, [setStudents]);
 
     // Drawer State
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -146,35 +182,46 @@ export default function StudentsPage() {
             </div>
 
             {/* Grid */}
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {students.map((student) => (
-                    <div
-                        key={student.id}
-                        className="group flex flex-col items-start overflow-hidden rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-100 transition-all hover:-translate-y-1 hover:shadow-md"
-                    >
-                        <div className="flex w-full items-start justify-between">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 text-2xl shadow-sm">
-                                {student.emoji}
+            {isLoadingStudents ? (
+                <div className="flex h-64 items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+                </div>
+            ) : students.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-64 text-slate-500 bg-white rounded-2xl border border-slate-100 border-dashed">
+                    <UserPlus className="h-12 w-12 text-slate-300 mb-3" />
+                    <p>No students generated yet.</p>
+                </div>
+            ) : (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {students.map((student) => (
+                        <div
+                            key={student.id}
+                            className="group flex flex-col items-start overflow-hidden rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-100 transition-all hover:-translate-y-1 hover:shadow-md"
+                        >
+                            <div className="flex w-full items-start justify-between">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 text-2xl shadow-sm">
+                                    {student.emoji}
+                                </div>
+                                <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
+                                    {student.type}
+                                </span>
                             </div>
-                            <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
-                                {student.type}
-                            </span>
-                        </div>
-                        <div className="mt-4">
-                            <h3 className="text-lg font-bold text-slate-900">{student.name}</h3>
-                            <p className="text-sm font-medium text-slate-500">{student.age} years old</p>
-                        </div>
+                            <div className="mt-4">
+                                <h3 className="text-lg font-bold text-slate-900">{student.name}</h3>
+                                <p className="text-sm font-medium text-slate-500">{student.age} years old</p>
+                            </div>
 
-                        <div className="mt-4 w-full rounded-xl bg-slate-50 p-3 text-sm">
-                            <div className="font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
-                                <AlertCircle size={14} className="text-amber-500" />
-                                Known Struggles
+                            <div className="mt-4 w-full rounded-xl bg-slate-50 p-3 text-sm">
+                                <div className="font-semibold text-slate-700 mb-1 flex items-center gap-1.5">
+                                    <AlertCircle size={14} className="text-amber-500" />
+                                    Known Struggles
+                                </div>
+                                <p className="text-slate-600 line-clamp-2">{student.struggles}</p>
                             </div>
-                            <p className="text-slate-600 line-clamp-2">{student.struggles}</p>
                         </div>
-                    </div>
-                ))}
-            </div>
+                    ))}
+                </div>
+            )}
 
             {/* Slide-over Drawer Overlay */}
             {isDrawerOpen && (
