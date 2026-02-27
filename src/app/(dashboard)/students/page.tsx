@@ -15,16 +15,25 @@ export default function StudentsPage() {
     // Form State
     const [newName, setNewName] = useState('');
     const [newEmoji, setNewEmoji] = useState('🧐');
+    const [newAge, setNewAge] = useState<number | ''>('');
+    const [newPersonality, setNewPersonality] = useState('');
     const [activityLevel, setActivityLevel] = useState(50);
     const [conflictLevel, setConflictLevel] = useState(20);
     const [attentionSpan, setAttentionSpan] = useState(50);
+    const [isGenerating, setIsGenerating] = useState(false);
+
+    // Validation State
+    const [ageError, setAgeError] = useState('');
 
     const openCreateDrawer = () => {
         setNewName('');
         setNewEmoji('🧠');
+        setNewAge('');
+        setNewPersonality('');
         setActivityLevel(50);
         setConflictLevel(20);
         setAttentionSpan(50);
+        setAgeError('');
         setIsDrawerOpen(true);
     };
 
@@ -42,27 +51,81 @@ export default function StudentsPage() {
         return 'ESL Student'; // fallback
     };
 
-    const handleGenerateStudent = (e: React.FormEvent) => {
+    const handleGenerateStudent = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newName) return;
 
-        const newStudent: Student = {
-            id: `s_${Date.now()}`,
-            name: newName,
-            age: 15,
-            type: determineStudentType(),
-            emoji: newEmoji,
-            moodScore: 50 + Math.floor(Math.random() * 30), // random starting mood 50-80
-            raisedHand: false,
-            learningStatus: 'Awaiting first lesson...',
-            struggles: conflictLevel > 60 ? 'Authority and rules.' : 'Needs continuous motivation.',
-        };
+        let isValid = true;
 
-        addStudent(newStudent);
-        toast.success('Diák sikeresen generálva!', {
-            description: `${newName} added to the persona pool.`,
-        });
-        closeDrawer();
+        // Validation
+        if (!newName.trim()) {
+            toast.error('Név megadása kötelező!');
+            isValid = false;
+        }
+
+        if (newAge === '' || newAge < 6 || newAge > 18) {
+            setAgeError('Kor csak 6 és 18 közötti szám lehet!');
+            isValid = false;
+        } else {
+            setAgeError('');
+        }
+
+        if (!isValid) return;
+
+        setIsGenerating(true);
+        const type = determineStudentType();
+
+        try {
+            // Call the Backend API
+            const response = await fetch('/api/students', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    name: newName,
+                    age: newAge,
+                    emoji: newEmoji,
+                    personality: newPersonality,
+                    activity_level: activityLevel,
+                    conflict_level: conflictLevel,
+                    attention_span: attentionSpan,
+                    type: type
+                }),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to generate student');
+            }
+
+            const { student: dbStudent } = await response.json();
+
+            // Construct client state student
+            const newStudent: Student = {
+                id: dbStudent.id, // Use UUID from Supabase
+                name: newName,
+                age: newAge as number,
+                type: type,
+                emoji: newEmoji,
+                moodScore: 50 + Math.floor(Math.random() * 30), // random starting mood 50-80
+                raisedHand: false,
+                learningStatus: 'Awaiting first lesson...',
+                struggles: conflictLevel > 60 ? 'Authority and rules.' : 'Needs continuous motivation.',
+            };
+
+            addStudent(newStudent);
+            toast.success('Diák sikeresen generálva és elmentve!', {
+                description: `${newName} added to the persona pool.`,
+            });
+            closeDrawer();
+        } catch (error: any) {
+            console.error("Failed to save student:", error);
+            toast.error('Hiba történt a mentés során.', {
+                description: error.message,
+            });
+        } finally {
+            setIsGenerating(false);
+        }
     };
 
     return (
@@ -142,14 +205,13 @@ export default function StudentsPage() {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6">
-                    <form id="generate-student-form" onSubmit={handleGenerateStudent} className="space-y-8">
+                    <form id="generate-student-form" onSubmit={handleGenerateStudent} noValidate className="space-y-6">
 
                         {/* Basic Info */}
                         <div className="grid grid-cols-4 gap-4">
                             <div className="col-span-3">
-                                <label className="mb-1.5 block text-sm font-semibold text-slate-900">Student Name</label>
+                                <label className="mb-1.5 block text-sm font-semibold text-slate-900">Student Name *</label>
                                 <input
-                                    required
                                     type="text"
                                     value={newName}
                                     onChange={(e) => setNewName(e.target.value)}
@@ -158,15 +220,42 @@ export default function StudentsPage() {
                                 />
                             </div>
                             <div className="col-span-1">
-                                <label className="mb-1.5 block text-sm font-semibold text-slate-900">Emoji</label>
+                                <label className="mb-1.5 block text-sm font-semibold text-slate-900">Emoji *</label>
                                 <input
-                                    required
                                     type="text"
                                     value={newEmoji}
                                     onChange={(e) => setNewEmoji(e.target.value)}
                                     className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-center text-xl outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
                                 />
                             </div>
+                        </div>
+
+                        {/* Age Field */}
+                        <div>
+                            <label className="mb-1.5 block text-sm font-semibold text-slate-900">Age *</label>
+                            <input
+                                type="number"
+                                value={newAge}
+                                onChange={(e) => {
+                                    setNewAge(e.target.value === '' ? '' : Number(e.target.value));
+                                    if (ageError) setAgeError('');
+                                }}
+                                onBlur={() => {
+                                    if (newAge !== '' && (newAge < 6 || newAge > 18)) {
+                                        setAgeError('Kor csak 6 és 18 közötti szám lehet!');
+                                    }
+                                }}
+                                placeholder="Age (6-18)"
+                                className={`w-full rounded-xl border px-4 py-2.5 outline-none transition-all focus:ring-2 ${ageError
+                                    ? 'border-red-500 focus:border-red-500 focus:ring-red-500/20'
+                                    : 'border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/20'
+                                    }`}
+                            />
+                            {ageError && (
+                                <p className="mt-1 text-xs text-red-500 font-medium">
+                                    {ageError}
+                                </p>
+                            )}
                         </div>
 
                         {/* Personality Sliders */}
@@ -225,6 +314,17 @@ export default function StudentsPage() {
                             </div>
                         </div>
 
+                        {/* Personality (Free Text) */}
+                        <div>
+                            <label className="mb-1.5 block text-sm font-semibold text-slate-900">Student Personality</label>
+                            <textarea
+                                value={newPersonality}
+                                onChange={(e) => setNewPersonality(e.target.value)}
+                                placeholder="Describe the student's background, quirks, and behavior..."
+                                className="w-full h-24 resize-none rounded-xl border border-slate-200 px-4 py-2.5 outline-none transition-all placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                            />
+                        </div>
+
                     </form>
                 </div>
 
@@ -233,10 +333,11 @@ export default function StudentsPage() {
                     <button
                         type="submit"
                         form="generate-student-form"
-                        className="flex w-full justify-center items-center gap-2 rounded-xl bg-indigo-500 py-3 font-semibold text-white shadow-sm transition-all hover:bg-indigo-600 hover:shadow-md active:scale-[0.98]"
+                        disabled={isGenerating}
+                        className="flex w-full justify-center items-center gap-2 rounded-xl bg-indigo-500 py-3 font-semibold text-white shadow-sm transition-all hover:bg-indigo-600 hover:shadow-md active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
                     >
                         <Sparkles size={18} />
-                        Generate AI Persona
+                        {isGenerating ? 'Saving...' : 'Generate AI Persona'}
                     </button>
                     <p className="mt-3 text-center text-xs text-slate-400">
                         This immediately creates a prompt context for the LLM.
@@ -246,3 +347,4 @@ export default function StudentsPage() {
         </div>
     );
 }
+
