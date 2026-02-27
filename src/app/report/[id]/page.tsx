@@ -47,20 +47,46 @@ export default function VirtualDiary() {
         checkAuth();
     }, []);
 
-    const handleSaveReport = () => {
+    const handleSaveReport = async () => {
         if (isGuest) {
             toast.error("Nincs bejelentkezve", {
                 description: "Kérjük, lépjen be a report mentéséhez.",
             });
             return;
         }
-        toast.success("Sikeres mentés az adatbázisba", {
-            description: "Class report and notes have been saved.",
-        });
-        // In actual app, redirect to dashboard. Let's just go to dashboard after a delay.
-        setTimeout(() => {
-            router.push('/dashboard');
-        }, 1500);
+
+        try {
+            const supabase = createClient();
+            const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+            if (authError || !user) {
+                throw new Error("Kérjük jelentkezzen be újra.");
+            }
+
+            const { error: dbError } = await supabase
+                .from('class_transcripts')
+                .insert([{
+                    user_id: user.id,
+                    class_id: classId,
+                    transcript: transcript, // This is the state array containing the conversation
+                    notes: notes
+                }]);
+
+            if (dbError) throw dbError;
+
+            toast.success("Sikeres mentés az adatbázisba", {
+                description: "Az osztály átirata és a jegyzetek mentve lettek a profilodhoz.",
+            });
+
+            setTimeout(() => {
+                router.push('/dashboard');
+            }, 1500);
+        } catch (error: any) {
+            console.error("Save error:", error);
+            toast.error("Hiba történt a mentés során", {
+                description: error.message || "Ismeretlen hiba.",
+            });
+        }
     };
 
     const handleLoadLiveTranscript = async () => {
