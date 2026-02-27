@@ -95,12 +95,22 @@ export async function POST(request: Request) {
     }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
     try {
-        const { data, error } = await supabase
+        const { searchParams } = new URL(request.url);
+        const searchQuery = searchParams.get('q');
+
+        let query = supabase
             .from('student_personas')
-            .select('id, name, age, emoji, type, prompt, condition')
+            .select('id, name, age, emoji, type, prompt, condition, personality, created_at')
             .order('created_at', { ascending: false });
+
+        if (searchQuery) {
+            // ILIKE matches case-insensitively. we check both name and condition.
+            query = query.or(`name.ilike.%${searchQuery}%,condition.ilike.%${searchQuery}%`);
+        }
+
+        const { data, error } = await query;
 
         if (error) {
             console.error("Supabase Error:", error);

@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useStore } from '@/store/useStore';
 import { Student, StudentType } from '@/types/shared';
-import { UserPlus, X, Sparkles, AlertCircle, Loader2 } from 'lucide-react';
+import { UserPlus, X, Sparkles, AlertCircle, Loader2, ArrowDownAZ, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function StudentsPage() {
     const { students, addStudent, setStudents } = useStore();
     const [isLoadingStudents, setIsLoadingStudents] = useState(true);
+    const [sortOption, setSortOption] = useState<'newest' | 'oldest' | 'name'>('newest');
 
     // Fetch students on mount
     useEffect(() => {
@@ -27,10 +28,12 @@ export default function StudentsPage() {
                     age: dbStudent.age,
                     type: dbStudent.type,
                     emoji: dbStudent.emoji,
+                    condition: dbStudent.condition,
+                    personality: dbStudent.personality,
+                    created_at: dbStudent.created_at,
                     moodScore: 50 + Math.floor(Math.random() * 30), // generic random starting mood
                     raisedHand: false,
                     learningStatus: 'Awaiting first lesson...',
-                    struggles: 'Needs continuous motivation.', // generic fallback since we don't fetch conflictLevel
                 }));
 
                 setStudents(mappedStudents);
@@ -148,11 +151,12 @@ export default function StudentsPage() {
                 age: newAge as number,
                 type: type,
                 condition: [...newConditions, ...(customCondition.trim() ? [customCondition.trim()] : [])].join(', ') || null,
+                personality: newPersonality,
+                created_at: dbStudent.created_at || new Date().toISOString(),
                 emoji: newEmoji,
                 moodScore: 50 + Math.floor(Math.random() * 30), // random starting mood 50-80
                 raisedHand: false,
                 learningStatus: 'Awaiting first lesson...',
-                struggles: conflictLevel > 60 ? 'Authority and rules.' : 'Needs continuous motivation.',
             };
 
             addStudent(newStudent);
@@ -169,6 +173,22 @@ export default function StudentsPage() {
             setIsGenerating(false);
         }
     };
+
+    const sortedStudents = useMemo(() => {
+        return [...students].sort((a, b) => {
+            if (sortOption === 'name') {
+                return a.name.localeCompare(b.name);
+            }
+            // default to lowest/highest dates
+            const aDate = a.created_at ? new Date(a.created_at).getTime() : 0;
+            const bDate = b.created_at ? new Date(b.created_at).getTime() : 0;
+            if (sortOption === 'oldest') {
+                return aDate - bDate;
+            }
+            // newest
+            return bDate - aDate;
+        });
+    }, [students, sortOption]);
 
     return (
         <div className="relative mx-auto max-w-5xl animate-in fade-in duration-500">
@@ -187,6 +207,28 @@ export default function StudentsPage() {
                 </button>
             </div>
 
+            {/* Controls Bar */}
+            {!isLoadingStudents && students.length > 0 && (
+                <div className="mb-6 flex w-full flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl bg-white dark:bg-slate-800/80 p-4 shadow-sm border border-slate-100 dark:border-slate-700/50">
+                    <div className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                        Showing <span className="font-bold text-slate-900 dark:text-white">{students.length}</span> Personas
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Sort by:</label>
+                        <select
+                            value={sortOption}
+                            onChange={(e) => setSortOption(e.target.value as any)}
+                            className="rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent dark:bg-slate-900/50 text-slate-700 dark:text-slate-200 px-3 py-2 text-sm outline-none transition-all hover:bg-slate-50 dark:hover:bg-slate-800/80 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                        >
+                            <option value="newest" className="text-slate-900 bg-white">Newest First</option>
+                            <option value="oldest" className="text-slate-900 bg-white">Oldest First</option>
+                            <option value="name" className="text-slate-900 bg-white">Name (A-Z)</option>
+                        </select>
+                    </div>
+                </div>
+            )}
+
             {/* Grid */}
             {isLoadingStudents ? (
                 <div className="flex h-64 items-center justify-center">
@@ -199,7 +241,7 @@ export default function StudentsPage() {
                 </div>
             ) : (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {students.map((student) => (
+                    {sortedStudents.map((student) => (
                         <div
                             key={student.id}
                             className="group flex flex-col items-start overflow-hidden rounded-2xl bg-white dark:bg-slate-800/80 p-5 shadow-sm ring-1 ring-slate-100 dark:ring-slate-700/50 transition-all hover:-translate-y-1 hover:shadow-md hover:ring-indigo-500/20 dark:hover:ring-indigo-500/30"
@@ -214,17 +256,25 @@ export default function StudentsPage() {
                                     </div>
                                 )}
                             </div>
-                            <div className="mt-4">
-                                <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">{student.name}</h3>
-                                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{student.age} years old</p>
+                            <div className="mt-4 flex w-full items-start justify-between">
+                                <div>
+                                    <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">{student.name}</h3>
+                                    <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{student.age} years old</p>
+                                </div>
+                                {student.created_at && (
+                                    <div className="text-xs text-slate-400 dark:text-slate-500 text-right">
+                                        Added<br />
+                                        {new Date(student.created_at).toLocaleDateString()}
+                                    </div>
+                                )}
                             </div>
 
                             <div className="mt-4 w-full rounded-xl bg-slate-50 dark:bg-slate-800/50 p-3 text-sm">
                                 <div className="font-semibold text-slate-700 dark:text-slate-200 mb-1 flex items-center gap-1.5">
                                     <AlertCircle size={14} className="text-amber-500" />
-                                    Known Struggles
+                                    Personality
                                 </div>
-                                <p className="text-slate-600 dark:text-slate-400 line-clamp-2">{student.struggles}</p>
+                                <p className="text-slate-600 dark:text-slate-400 line-clamp-2">{student.personality || "-"}</p>
                             </div>
                         </div>
                     ))}

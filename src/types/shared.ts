@@ -53,9 +53,11 @@ export interface Student {
     moodScore: number; // 0-100
     raisedHand: boolean;
     learningStatus: string;
-    struggles: string;
+    struggles?: string;
+    personality?: string;
     prompt?: string;
     condition?: string | null;
+    created_at?: string;
     currentAction?: 'LISTEN' | 'RAISE_HAND' | 'ANSWER_DIRECTLY' | 'WHISPER' | 'INTERRUPT';
     currentMessage?: string | null;
 }
