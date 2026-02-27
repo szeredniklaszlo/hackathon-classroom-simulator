@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { LayoutDashboard, Users, UserSquare, BrainCircuit } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 const navLinks = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -70,8 +71,13 @@ export default function Sidebar() {
                     })}
                 </nav>
 
+                {/* Theme Toggle */}
+                <div className="mt-4 border-t border-slate-100 dark:border-slate-800 pt-4">
+                    <ThemeToggle />
+                </div>
+
                 {/* Teacher Profile Summary */}
-                <div className="mt-8 rounded-2xl bg-slate-50 dark:bg-slate-800/50 p-4 border border-slate-100 dark:border-slate-700/50">
+                <div className="mt-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 p-4 border border-slate-100 dark:border-slate-700/50">
                     <div className="flex items-center gap-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-sky-900/60 text-primary dark:text-sky-300 font-bold">
                             {initials}
