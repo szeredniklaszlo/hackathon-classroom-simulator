@@ -25,13 +25,13 @@ export default async function LoginPage({
 
                 <form className="space-y-4">
                     <div className="space-y-2">
-                        <label className="text-sm font-medium dark:text-slate-200" htmlFor="full_name">Teljes név (csak regisztrációhoz)</label>
+                        <label className="text-sm font-medium dark:text-slate-200" htmlFor="full_name">Full Name (for registration only)</label>
                         <input
                             className="w-full px-3 py-2 border dark:border-slate-700 bg-white dark:bg-slate-900/50 dark:text-slate-200 rounded-md focus:outline-none focus:ring-2 focus:ring-black dark:focus:ring-sky-500"
                             id="full_name"
                             name="full_name"
                             type="text"
-                            placeholder="Kovács János"
+                            placeholder="John Doe"
                         />
                     </div>
                     <div className="space-y-2">

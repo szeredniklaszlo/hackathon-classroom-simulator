@@ -73,7 +73,7 @@ export default function StudentCard({ student, idx }: { student: Student, idx: n
                     console.error("Failed to play student audio:", error);
                     setIsSpeaking(false);
                     // Fallback to toast if audio fails
-                    toast.error(`Nem sikerült lejátszani ${student.name} hangját.`);
+                    toast.error(`Failed to play audio for ${student.name}.`);
                 }
             };
 

@@ -39,7 +39,7 @@ export default function VirtualClassroom() {
                     }
                 } catch (error) {
                     console.error("Error fetching data:", error);
-                    toast.error('Hiba történt az adatok betöltésekor.');
+                    toast.error('Error loading data.');
                 } finally {
                     setIsLoadingData(false);
                 }
@@ -56,18 +56,26 @@ export default function VirtualClassroom() {
     // If data finished loading and class is not found, redirect
     useEffect(() => {
         if (!isLoadingData && !initialClass) {
-            toast.error("Osztály nem található, vagy még nincs létrehozva.");
+            toast.error("Class not found or not created yet.");
             router.push('/dashboard');
         }
     }, [isLoadingData, initialClass, router]);
 
-    // Update students state when initialClass becomes available
-    const [students, setStudents] = useState<Student[]>(initialClass?.students || []);
+    // Update students state when initialClass becomes available, ensuring moodScore exists
+    const [students, setStudents] = useState<Student[]>(
+        (initialClass?.students || []).map(s => ({
+            ...s,
+            moodScore: typeof s.moodScore === 'number' && !isNaN(s.moodScore) ? s.moodScore : 100
+        }))
+    );
 
     // Update local state when initialClass fully loads from the async fetch
     useEffect(() => {
         if (initialClass?.students && students.length === 0) {
-            setStudents(initialClass.students);
+            setStudents(initialClass.students.map(s => ({
+                ...s,
+                moodScore: typeof s.moodScore === 'number' && !isNaN(s.moodScore) ? s.moodScore : 100
+            })));
         }
     }, [initialClass]);
 
@@ -232,7 +240,7 @@ export default function VirtualClassroom() {
     };
 
     const handleSaveRoster = () => {
-        toast.success("Sikeres mentés az adatbázisba", {
+        toast.success("Successfully saved to database", {
             description: "Class roster has been successfully updated.",
         });
     };
@@ -243,14 +251,14 @@ export default function VirtualClassroom() {
         if (available.length > 0) {
             const newStudent = available[Math.floor(Math.random() * available.length)];
             setStudents([...students, newStudent]);
-            toast.success(`Hazádtuk a fiktív diákot: ${newStudent.name}`);
+            toast.success(`Added dummy student: ${newStudent.name}`);
         } else if (globalStudents.length > 0) {
             // Just clone one for demo purposes
             const clone = { ...globalStudents[Math.floor(Math.random() * globalStudents.length)], id: `s${Date.now()}` };
             setStudents([...students, clone]);
-            toast.success(`Hozzáadtunk egy klónozott diákot: ${clone.name}`);
+            toast.success(`Added a cloned student: ${clone.name}`);
         } else {
-            toast.error("Nincs elég diák az adatbázisban.");
+            toast.error("Not enough students in the database.");
         }
     };
 
@@ -319,8 +327,16 @@ export default function VirtualClassroom() {
                     {/* Simulation Viewport */}
                     <div className="flex-1 bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm p-8 flex flex-col justify-center relative overflow-hidden">
 
+                        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 auto-rows-fr h-full place-items-center">
+                            <AnimatePresence>
+                                {students.map((student, idx) => (
+                                    <StudentCard key={student.id} student={student} idx={idx} />
+                                ))}
+                            </AnimatePresence>
+                        </div>
+
                         {!isPlaying && (
-                            <div className="absolute inset-0 bg-slate-900/5 dark:bg-slate-950/60 backdrop-blur-[2px] z-10 flex items-center justify-center flex-col gap-4">
+                            <div className="absolute inset-0 bg-slate-900/5 dark:bg-slate-950/60 backdrop-blur-[2px] z-50 flex items-center justify-center flex-col gap-4">
                                 <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-xl dark:shadow-slate-950/50 flex flex-col items-center text-center max-w-sm border border-slate-100 dark:border-slate-800">
                                     <Clock className="text-slate-400 dark:text-slate-500 mb-3" size={32} />
                                     <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Class Not Started</h3>
@@ -334,14 +350,6 @@ export default function VirtualClassroom() {
                                 </div>
                             </div>
                         )}
-
-                        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 auto-rows-fr h-full place-items-center">
-                            <AnimatePresence>
-                                {students.map((student, idx) => (
-                                    <StudentCard key={student.id} student={student} idx={idx} />
-                                ))}
-                            </AnimatePresence>
-                        </div>
                     </div>
                 </main>
 
