@@ -1,35 +1,4 @@
-// types
-
-export type StudentType = 'Fast Learner' | 'ESL Student' | 'Easily Distracted' | 'Deep Thinker' | 'Anxious Achiever' | 'Class Clown';
-
-export interface Student {
-    id: string;
-    name: string;
-    age: number;
-    type: StudentType;
-    emoji: string;
-    moodScore: number; // 0-100
-    raisedHand: boolean;
-    learningStatus: string;
-    struggles: string;
-}
-
-export interface VirtualClass {
-    id: string;
-    name: string;
-    subject: string;
-    emoji: string;
-    description: string;
-    students: Student[];
-}
-
-export interface TranscriptEntry {
-    id: string;
-    speaker: 'Teacher' | string; // 'Teacher' or student name
-    text: string;
-    timestamp: string;
-    emotion?: 'neutral' | 'happy' | 'confused' | 'bored' | 'engaged';
-}
+import { StudentType, Student, VirtualClass, TranscriptEntry } from '@/types/shared';
 
 // Mock Data
 
