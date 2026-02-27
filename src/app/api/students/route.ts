@@ -99,7 +99,7 @@ export async function GET() {
     try {
         const { data, error } = await supabase
             .from('student_personas')
-            .select('id, name, age, emoji, type, prompt, condition')
+            .select('id, name, age, emoji, type, prompt, condition, personality, created_at')
             .order('created_at', { ascending: false });
 
         if (error) {
