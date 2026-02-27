@@ -20,6 +20,14 @@ export default function Dashboard() {
     // Display only up to 3 recent classes
     const recentClasses = classes.slice(0, 3);
     const [userName, setUserName] = useState('Teacher');
+    const [greeting, setGreeting] = useState('Welcome');
+
+    useEffect(() => {
+        const hour = new Date().getHours();
+        if (hour < 12) setGreeting('Good morning');
+        else if (hour < 18) setGreeting('Good afternoon');
+        else setGreeting('Good evening');
+    }, []);
 
     useEffect(() => {
         const fetchUser = async () => {
@@ -37,7 +45,7 @@ export default function Dashboard() {
         <div className="mx-auto max-w-5xl space-y-8 animate-in fade-in zoom-in-95 duration-500">
             {/* Header */}
             <div>
-                <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Good morning, {userName} 👋</h1>
+                <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">{greeting}, {userName} 👋</h1>
                 <p className="mt-1 text-slate-500 dark:text-slate-400">Ready to challenge your teaching skills today?</p>
             </div>
 
