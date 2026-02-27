@@ -65,7 +65,7 @@ Respond ONLY with a valid JSON object matching this schema:
                 { role: 'system', content: 'You are an expert prompt engineer. Based on the provided student details, write an English prompt that can be given to an AI so that the AI behaves exactly like this student in a classroom simulator. Only output the generated prompt, nothing else.' },
                 { role: 'user', content: `Student details:\nName: ${parsedData.name}\nAge: ${parsedData.age}\nType: ${parsedData.type}\nCondition/Disability: ${joinedConditions || 'None'}\nPersonality: ${parsedData.personality}\nActivity Level: ${parsedData.activityLevel}\nConflict Level: ${parsedData.conflictLevel}\nAttention Span: ${parsedData.attentionSpan}` }
             ],
-            temperature: 0.7
+            //temperature: 0.7
         });
 
         const generatedPrompt = systemPromptResult.choices[0]?.message?.content?.trim() || '';

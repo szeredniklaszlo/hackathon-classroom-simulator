@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { AzureOpenAI } from 'openai';
 
 // Initialize Supabase.  Using env variables in a real app, 
 // but for the hackathon/simplicity we use the project URL and anon key here.
@@ -27,39 +28,54 @@ export async function POST(request: Request) {
         }
 
         let generatedPrompt = '';
-        if (process.env.OPENAI_API_KEY) {
+        if (process.env.AZURE_OPENAI_API_KEY && process.env.AZURE_OPENAI_ENDPOINT) {
             try {
-                const openAiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
-                    },
-                    body: JSON.stringify({
-                        model: 'gpt-4o-mini',
-                        messages: [
-                            {
-                                role: 'system',
-                                content: 'You are an expert prompt engineer. Based on the provided student details, write an English prompt that can be given to an AI so that the AI behaves exactly like this student in a classroom simulator. Only output the generated prompt, nothing else.'
-                            },
-                            {
-                                role: 'user',
-                                content: `Student details:\nName: ${name}\nAge: ${age}\nType: ${type}\nCondition/Disability: ${condition || 'None'}\nPersonality: ${personality}\nActivity Level: ${activity_level}\nConflict Level: ${conflict_level}\nAttention Span: ${attention_span}`
-                            }
-                        ],
-                        temperature: 0.7,
-                    })
+                const client = new AzureOpenAI({
+                    endpoint: process.env.AZURE_OPENAI_ENDPOINT,
+                    apiKey: process.env.AZURE_OPENAI_API_KEY,
+                    apiVersion: process.env.AZURE_OPENAI_API_VERSION || '2024-12-01-preview',
+                    deployment: process.env.AZURE_OPENAI_DEPLOYMENT_NAME,
                 });
 
-                if (openAiResponse.ok) {
-                    const aiData = await openAiResponse.json();
-                    generatedPrompt = aiData.choices?.[0]?.message?.content?.trim() || '';
-                } else {
-                    console.error("OpenAI API Error:", await openAiResponse.text());
-                }
+                const openAiResponse = await client.chat.completions.create({
+                    model: process.env.AZURE_OPENAI_DEPLOYMENT_NAME || '',
+                    messages: [
+                        {
+                            role: 'system',
+                            content: `Te egy nagyon profi Prompt Engineer vagy, aki AI alapú oktatási szimulátorhoz készít rendkívül részletes "System Prompt"-ot. 
+Készítsd el a tanuló system promptját EGY/ELSŐ SZEMÉLYBE ("You are..."). 
+A prompt tartalmazza:
+- Milyen a tanuló háttérsztorija, személyisége és viselkedése a tanórán.
+- Hogyan reagál kérdésekre, hogyan kommunikál.
+- Milyen speciális betegségei vannak, azok hogyan jelennek meg (pl. figyelemzavar).
+- Mit tesz, ha unatkozik, ha dicséri a tanár, ha felszólítják de nem tudja.
+A válaszodban CSAK ÉS KIZÁRÓLAG az elkészített teljes angol nyelvű system prompt szerepeljen, semmi más.`
+                        },
+                        {
+                            role: 'user',
+                            content: `Student details:
+Name: ${name}
+Age: ${age}
+Type/Role: ${type}
+Condition/Disability: ${condition || 'None'}
+Personality: ${personality}
+Activity Level (0-100): ${activity_level}
+Conflict Level (0-100): ${conflict_level}
+Attention Span (0-100): ${attention_span}
+
+Please generate the detailed persona system prompt in English.`
+                        }
+                    ],
+                    //temperature: 0.8,
+                });
+
+                generatedPrompt = openAiResponse.choices?.[0]?.message?.content?.trim() || '';
+                console.log("Sikeresen generálva a prompt:", generatedPrompt.substring(0, 50) + "...");
             } catch (aiError) {
-                console.error("Failed to generate prompt:", aiError);
+                console.error("Failed to generate prompt via Azure OpenAI:", aiError);
             }
+        } else {
+            console.warn("Nincs beállítva az AZURE_OPENAI_API_KEY vagy ENDPOINT a környezeti változókban!");
         }
 
         // Insert into Supabase

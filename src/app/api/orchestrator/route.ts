@@ -47,33 +47,34 @@ export async function POST(req: Request) {
 
         // --- 2. PROCESSOR (A Multi-Agent logika) ---
 
-        const studentPromises = students.map(async (student: any) => {
-            try {
-                // Ellenőrizzük, hogy a tanár közvetlenül ezt a diákot szólította-e meg
-                const isAddressed = isDirectlyAddressed(preProc.extractedContext!, student.name);
+        console.log(`[Orchestrator] PÁRHUZAMOSAN (Parallel) elindítjuk ${students.length} tanuló AI generálását...`);
 
-                // Személyiség specifikus prompt építése
-                const personalityPrompt = `
-                Name: ${student.name}
-                Personality: ${student.personality || "Average student"}
-                Current Engagement: ${student.moodScore}/100
-                Role: ${student.type} (e.g. nerd, troublemaker, shy)
-                `;
+        // Tömböt hozunk létre a Promise-okból, melyek egyszerre fognak elindulni
+        const studentPromises = students.map((student: any) => {
+            return (async () => {
+                try {
+                    // Ellenőrizzük, hogy a tanár közvetlenül ezt a diákot szólította-e meg
+                    const isAddressed = isDirectlyAddressed(preProc.extractedContext!, student.name);
 
-                const result = await client.chat.completions.create({
-                    model: process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "",
-                    response_format: { type: "json_object" },
-                    messages: [
-                        {
-                            role: "system",
-                            content: `You are simulating a student in a classroom.
-                            
-YOUR BEHAVIORAL PROTOCOL:
+                    const basePersona = student.prompt
+                        ? `YOUR DETAILED SYSTEM PERSONA:\n${student.prompt}\n\nCURRENT STATE:\nCurrent Engagement/Mood: ${student.moodScore}/100`
+                        : `Name: ${student.name}\nPersonality: ${student.personality || "Average student"}\nCurrent Engagement: ${student.moodScore}/100\nRole: ${student.type} (e.g. nerd, troublemaker, shy)`;
+
+                    const result = await client.chat.completions.create({
+                        model: process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "",
+                        response_format: { type: "json_object" },
+                        messages: [
+                            {
+                                role: "system",
+                                content: `You are simulating a student in a classroom.
+                                
+${basePersona}
+
+YOUR BEHAVIORAL PROTOCOL (CRITICAL RULES):
 1. **DEFAULT STATE:** You should usually stay SILENT and LISTEN.
 2. **DIRECT ADDRESS:** If the teacher explicitly said your name ("${student.name}"), you MUST respond (action: "ANSWER_DIRECTLY").
-3. **GENERAL QUESTIONS:** If the teacher asks a general question to the class, DO NOT shout out. Instead, choose "RAISE_HAND" if you know the answer, or "LISTEN" if you don't.
-4. **DISRUPTION:** Only if your personality is "distracted" or "troublemaker" AND your engagement is low, you might "WHISPER" to a neighbor or "INTERRUPT".
-5. **SHY STUDENTS:** Even if you know the answer, a shy student might just "LISTEN" or hesitantly "RAISE_HAND".
+3. **DISRUPTION:** Only if your personality (as described above) is distracted or a troublemaker AND your engagement is low, you might "WHISPER" to a neighbor or "INTERRUPT". Let your specific conditions dictate if you interrupt or whisper.
+4. **SHY/ANXIOUS:** Even if you know the answer, if you are shy or anxious according to your persona, you might just "LISTEN" or hesitantly "RAISE_HAND".
 
 INPUT CONTEXT:
 Teacher said: "${preProc.extractedContext}"
@@ -88,19 +89,22 @@ Analyze the situation and return JSON:
   "newEngagement": number (0-100),
   "emotion": "curious" | "bored" | "anxious" | "excited"
 }`
-                        }
-                    ]
-                });
+                            }
+                        ]
+                    });
 
-                const content = result.choices[0]?.message?.content;
-                return content ? JSON.parse(content) : null;
-            } catch (err) {
-                console.error(`Error with student ${student.name}`, err);
-                return null;
-            }
+                    const content = result.choices[0]?.message?.content;
+                    return content ? JSON.parse(content) : null;
+                } catch (err) {
+                    console.error(`Error with student ${student.name}`, err);
+                    return null;
+                }
+            })();
         });
 
+        // Promise.all segítségével PÁRHUZAMOSAN bevárjuk az összes tanuló válaszát
         const rawResponses = (await Promise.all(studentPromises)).filter(Boolean);
+        console.log(`[Orchestrator] Minden tanuló válasza megérkezett párhuzamosan.`);
 
         // --- 3. THE CONDUCTOR (Utófeldolgozás / Konfliktuskezelés) ---
         // Itt döntjük el, ki beszélhet valójában, hogy ne legyen káosz.
