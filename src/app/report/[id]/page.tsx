@@ -65,16 +65,16 @@ export default function VirtualDiary() {
     };
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC]">
+        <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-950">
             {/* Top Navbar */}
-            <header className="bg-white border-b border-slate-200 h-16 flex items-center justify-between px-6 shadow-sm sticky top-0 z-30">
+            <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 h-16 flex items-center justify-between px-6 shadow-sm sticky top-0 z-30">
                 <div className="flex items-center gap-4">
-                    <Link href={`/class/${classId}`} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500">
+                    <Link href={`/class/${classId}`} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-500 dark:text-slate-400">
                         <ArrowLeft size={20} />
                     </Link>
                     <div>
-                        <h1 className="font-bold text-slate-800 text-lg leading-tight">Virtual Diary</h1>
-                        <p className="text-xs text-slate-500 font-medium">Post-Class Analysis</p>
+                        <h1 className="font-bold text-slate-800 dark:text-slate-100 text-lg leading-tight">Virtual Diary</h1>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Post-Class Analysis</p>
                     </div>
                 </div>
 
@@ -82,7 +82,7 @@ export default function VirtualDiary() {
                     <button
                         onClick={exportPDF}
                         disabled={isExporting}
-                        className="flex items-center gap-2 text-slate-600 hover:text-primary transition-colors hover:bg-slate-50 px-3 py-2 rounded-lg text-sm font-semibold border border-slate-200 hover:border-blue-200 disabled:opacity-50"
+                        className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-primary dark:hover:text-indigo-400 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 px-3 py-2 rounded-lg text-sm font-semibold border border-slate-200 dark:border-slate-700 hover:border-blue-200 dark:hover:border-indigo-700 disabled:opacity-50"
                     >
                         <Download size={18} />
                         <span className="hidden sm:inline">{isExporting ? 'Exporting...' : 'Download PDF'}</span>
@@ -101,64 +101,64 @@ export default function VirtualDiary() {
             <main className="max-w-4xl mx-auto py-8 px-4 sm:px-6">
 
                 {/* Action Guard for Guest Users */}
-                <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+                <div className="mb-6 bg-amber-50 dark:bg-amber-900/15 border border-amber-200 dark:border-amber-800/40 rounded-xl p-4 flex items-start gap-3">
                     <AlertCircle className="text-amber-500 mt-0.5 shrink-0" size={20} />
                     <div>
-                        <h4 className="font-semibold text-amber-800">Guest Mode Active</h4>
-                        <p className="text-sm text-amber-700 mt-0.5">Log in to save this data permanently to your database profile. Saving now will only simulate the process.</p>
+                        <h4 className="font-semibold text-amber-800 dark:text-amber-300">Guest Mode Active</h4>
+                        <p className="text-sm text-amber-700 dark:text-amber-400 mt-0.5">Log in to save this data permanently to your database profile. Saving now will only simulate the process.</p>
                     </div>
                 </div>
 
                 {/* --- PDF CONTENT WRAPPER --- */}
-                <div ref={reportRef} className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
+                <div ref={reportRef} className="bg-white dark:bg-slate-900 p-8 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-800">
 
                     {/* Header Info */}
-                    <div className="border-b border-slate-100 pb-6 mb-8 text-center sm:text-left">
-                        <h2 className="text-3xl font-extrabold text-slate-900 mb-2">{currentClass.subject}</h2>
-                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 text-sm font-medium text-slate-500">
-                            <span className="flex items-center gap-1.5 bg-slate-100 px-3 py-1 rounded-full"><span className="text-lg">{currentClass.emoji}</span> {currentClass.name}</span>
-                            <span className="bg-slate-100 px-3 py-1 rounded-full">{currentClass.students.length} Students</span>
-                            <span className="bg-slate-100 px-3 py-1 rounded-full">{new Date().toLocaleDateString()}</span>
+                    <div className="border-b border-slate-100 dark:border-slate-800 pb-6 mb-8 text-center sm:text-left">
+                        <h2 className="text-3xl font-extrabold text-slate-900 dark:text-slate-100 mb-2">{currentClass.subject}</h2>
+                        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 text-sm font-medium text-slate-500 dark:text-slate-400">
+                            <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full"><span className="text-lg">{currentClass.emoji}</span> {currentClass.name}</span>
+                            <span className="bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">{currentClass.students.length} Students</span>
+                            <span className="bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">{new Date().toLocaleDateString()}</span>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                         {/* Teacher Notes Area */}
                         <div className="flex flex-col">
-                            <h3 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
+                            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3 flex items-center gap-2">
                                 <PenLine size={20} className="text-primary" /> Teacher Notes
                             </h3>
                             <textarea
                                 value={notes}
                                 onChange={(e) => setNotes(e.target.value)}
                                 placeholder="What methodology did you try? Observations? Self-reflection?"
-                                className="w-full h-40 md:h-full p-4 rounded-2xl border border-slate-200 bg-slate-50 focus:bg-white resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm text-slate-700 placeholder:text-slate-400"
+                                className="w-full h-40 md:h-full p-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 focus:bg-white dark:focus:bg-slate-800 dark:text-slate-100 resize-none focus:outline-none focus:ring-2 focus:ring-primary/50 text-sm text-slate-700 placeholder:text-slate-400 dark:placeholder:text-slate-500"
                             />
                         </div>
 
                         {/* AI Feedback Cards */}
                         <div className="space-y-4">
-                            <h3 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
+                            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3 flex items-center gap-2">
                                 <SparklesIcon /> AI Coach Feedback
                             </h3>
 
-                            <div className="bg-green-50 border border-green-100 rounded-2xl p-4">
-                                <h4 className="text-green-800 font-bold flex items-center gap-2 mb-2 text-sm"><CheckCircle2 size={16} /> What Went Well</h4>
-                                <ul className="text-sm text-green-700 space-y-1 pl-6 list-disc marker:text-green-300">
+                            <div className="bg-green-50 dark:bg-green-900/15 border border-green-100 dark:border-green-800/40 rounded-2xl p-4">
+                                <h4 className="text-green-800 dark:text-green-300 font-bold flex items-center gap-2 mb-2 text-sm"><CheckCircle2 size={16} /> What Went Well</h4>
+                                <ul className="text-sm text-green-700 dark:text-green-400 space-y-1 pl-6 list-disc marker:text-green-300">
                                     {mockAIFeedback.wentWell.map((fb, i) => <li key={i}>{fb}</li>)}
                                 </ul>
                             </div>
 
-                            <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4">
-                                <h4 className="text-rose-800 font-bold flex items-center gap-2 mb-2 text-sm"><AlertCircle size={16} /> Areas to Consider</h4>
-                                <ul className="text-sm text-rose-700 space-y-1 pl-6 list-disc marker:text-rose-300">
+                            <div className="bg-rose-50 dark:bg-rose-900/15 border border-rose-100 dark:border-rose-800/40 rounded-2xl p-4">
+                                <h4 className="text-rose-800 dark:text-rose-300 font-bold flex items-center gap-2 mb-2 text-sm"><AlertCircle size={16} /> Areas to Consider</h4>
+                                <ul className="text-sm text-rose-700 dark:text-rose-400 space-y-1 pl-6 list-disc marker:text-rose-300">
                                     {mockAIFeedback.toImprove.map((fb, i) => <li key={i}>{fb}</li>)}
                                 </ul>
                             </div>
 
-                            <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
-                                <h4 className="text-blue-800 font-bold flex items-center gap-2 mb-2 text-sm"><Lightbulb size={16} /> Suggested Approaches</h4>
-                                <ul className="text-sm text-blue-700 space-y-1 pl-6 list-disc marker:text-blue-300">
+                            <div className="bg-blue-50 dark:bg-blue-900/15 border border-blue-100 dark:border-blue-800/40 rounded-2xl p-4">
+                                <h4 className="text-blue-800 dark:text-blue-300 font-bold flex items-center gap-2 mb-2 text-sm"><Lightbulb size={16} /> Suggested Approaches</h4>
+                                <ul className="text-sm text-blue-700 dark:text-blue-400 space-y-1 pl-6 list-disc marker:text-blue-300">
                                     {mockAIFeedback.suggestions.map((fb, i) => <li key={i}>{fb}</li>)}
                                 </ul>
                             </div>
@@ -167,7 +167,7 @@ export default function VirtualDiary() {
 
                     {/* Transcript Section */}
                     <div>
-                        <h3 className="text-xl font-bold text-slate-800 mb-6 pt-6 border-t border-slate-100">Class Transcript</h3>
+                        <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-6 pt-6 border-t border-slate-100 dark:border-slate-800">Class Transcript</h3>
                         <div className="space-y-4">
                             {mockTranscript.map((entry, idx) => (
                                 <motion.div
@@ -177,14 +177,14 @@ export default function VirtualDiary() {
                                     key={entry.id}
                                     className={`flex flex-col ${entry.speaker === 'Teacher' ? 'items-end' : 'items-start'}`}
                                 >
-                                    <span className="text-[11px] font-bold text-slate-400 mb-1 px-2 uppercase tracking-wider">
+                                    <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 mb-1 px-2 uppercase tracking-wider">
                                         {entry.speaker} • {entry.timestamp}
                                     </span>
 
                                     <div className={`max-w-[85%] px-5 py-3 rounded-2xl text-sm leading-relaxed
                     ${entry.speaker === 'Teacher'
                                             ? 'bg-primary text-white rounded-tr-sm shadow-md shadow-blue-500/10'
-                                            : 'bg-slate-100 text-slate-800 rounded-tl-sm border border-slate-200'
+                                            : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-tl-sm border border-slate-200 dark:border-slate-700'
                                         }
                   `}>
                                         {entry.text}
@@ -193,9 +193,9 @@ export default function VirtualDiary() {
                                     {/* Emotion/Reaction tag for students */}
                                     {entry.speaker !== 'Teacher' && entry.emotion && (
                                         <span className={`text-[10px] font-bold mt-1.5 px-2 py-0.5 rounded-full border opacity-80
-                        ${entry.emotion === 'happy' ? 'text-green-600 bg-green-50 border-green-200' : ''}
-                        ${entry.emotion === 'confused' ? 'text-rose-600 bg-rose-50 border-rose-200' : ''}
-                        ${entry.emotion === 'neutral' ? 'text-slate-500 bg-slate-50 border-slate-200' : ''}
+                        ${entry.emotion === 'happy' ? 'text-green-600 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : ''}
+                        ${entry.emotion === 'confused' ? 'text-rose-600 bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800' : ''}
+                        ${entry.emotion === 'neutral' ? 'text-slate-500 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700' : ''}
                      `}>
                                             Reacted: {entry.emotion}
                                         </span>
