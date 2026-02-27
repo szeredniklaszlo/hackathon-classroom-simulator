@@ -17,6 +17,7 @@ export default function VirtualClassroom() {
     const classId = params.id as string;
 
     const { classes, students: globalStudents, setClasses, setStudents: setGlobalStudents } = useStore();
+    const [isLoadingData, setIsLoadingData] = useState(classes.length === 0);
 
     // Fetch data on direct navigation if store is empty
     useEffect(() => {
@@ -39,22 +40,26 @@ export default function VirtualClassroom() {
                 } catch (error) {
                     console.error("Error fetching data:", error);
                     toast.error('Hiba történt az adatok betöltésekor.');
+                } finally {
+                    setIsLoadingData(false);
                 }
             };
             fetchData();
+        } else {
+            setIsLoadingData(false);
         }
     }, [classes.length, setClasses, setGlobalStudents]);
 
     // Find initial class
     const initialClass = classes.find(c => c.id === classId);
 
-    // If classes are loaded but ID is invalid, show loading or redirect
+    // If data finished loading and class is not found, redirect
     useEffect(() => {
-        if (classes.length > 0 && !initialClass) {
-            toast.error("Class not found.");
+        if (!isLoadingData && !initialClass) {
+            toast.error("Osztály nem található, vagy még nincs létrehozva.");
             router.push('/dashboard');
         }
-    }, [classes, initialClass, router]);
+    }, [isLoadingData, initialClass, router]);
 
     // Update students state when initialClass becomes available
     const [students, setStudents] = useState<Student[]>(initialClass?.students || []);
