@@ -15,7 +15,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { name, age, emoji, personality, activity_level, conflict_level, attention_span, type } = body;
+        const { name, age, emoji, personality, activity_level, conflict_level, attention_span, type, condition } = body;
 
         // Basic Validation
         if (!name || type === undefined) {
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
                             },
                             {
                                 role: 'user',
-                                content: `Student details:\nName: ${name}\nAge: ${age}\nType: ${type}\nPersonality: ${personality}\nActivity Level: ${activity_level}\nConflict Level: ${conflict_level}\nAttention Span: ${attention_span}`
+                                content: `Student details:\nName: ${name}\nAge: ${age}\nType: ${type}\nCondition/Disability: ${condition || 'None'}\nPersonality: ${personality}\nActivity Level: ${activity_level}\nConflict Level: ${conflict_level}\nAttention Span: ${attention_span}`
                             }
                         ],
                         temperature: 0.7,
@@ -75,6 +75,7 @@ export async function POST(request: Request) {
                     conflict_level,
                     attention_span,
                     type,
+                    condition: condition || null,
                     prompt: generatedPrompt || null
                 }
             ])
@@ -98,7 +99,7 @@ export async function GET() {
     try {
         const { data, error } = await supabase
             .from('student_personas')
-            .select('id, name, age, emoji, type, prompt')
+            .select('id, name, age, emoji, type, prompt, condition')
             .order('created_at', { ascending: false });
 
         if (error) {
