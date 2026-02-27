@@ -55,6 +55,7 @@ export interface Student {
     learningStatus: string;
     struggles: string;
     prompt?: string;
+    condition?: string | null;
     currentAction?: 'LISTEN' | 'RAISE_HAND' | 'ANSWER_DIRECTLY' | 'WHISPER' | 'INTERRUPT';
     currentMessage?: string | null;
 }

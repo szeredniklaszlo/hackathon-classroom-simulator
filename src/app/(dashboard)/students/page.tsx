@@ -52,6 +52,8 @@ export default function StudentsPage() {
     const [newName, setNewName] = useState('');
     const [newEmoji, setNewEmoji] = useState('🧐');
     const [newAge, setNewAge] = useState<number | ''>('');
+    const [newConditions, setNewConditions] = useState<string[]>([]);
+    const [customCondition, setCustomCondition] = useState('');
     const [newPersonality, setNewPersonality] = useState('');
     const [activityLevel, setActivityLevel] = useState(50);
     const [conflictLevel, setConflictLevel] = useState(20);
@@ -65,6 +67,8 @@ export default function StudentsPage() {
         setNewName('');
         setNewEmoji('🧠');
         setNewAge('');
+        setNewConditions([]);
+        setCustomCondition('');
         setNewPersonality('');
         setActivityLevel(50);
         setConflictLevel(20);
@@ -125,7 +129,8 @@ export default function StudentsPage() {
                     activity_level: activityLevel,
                     conflict_level: conflictLevel,
                     attention_span: attentionSpan,
-                    type: type
+                    type: type,
+                    condition: [...newConditions, ...(customCondition.trim() ? [customCondition.trim()] : [])].join(', ') || null
                 }),
             });
 
@@ -142,6 +147,7 @@ export default function StudentsPage() {
                 name: newName,
                 age: newAge as number,
                 type: type,
+                condition: [...newConditions, ...(customCondition.trim() ? [customCondition.trim()] : [])].join(', ') || null,
                 emoji: newEmoji,
                 moodScore: 50 + Math.floor(Math.random() * 30), // random starting mood 50-80
                 raisedHand: false,
@@ -198,10 +204,15 @@ export default function StudentsPage() {
                             key={student.id}
                             className="group flex flex-col items-start overflow-hidden rounded-2xl bg-white dark:bg-slate-800/80 p-5 shadow-sm ring-1 ring-slate-100 dark:ring-slate-700/50 transition-all hover:-translate-y-1 hover:shadow-md hover:ring-indigo-500/20 dark:hover:ring-indigo-500/30"
                         >
-                            <div className="flex w-full items-start justify-between">
+                            <div className="flex w-full items-start justify-between relative">
                                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 dark:bg-slate-700/50 text-2xl shadow-sm">
                                     {student.emoji}
                                 </div>
+                                {student.condition && (
+                                    <div className="absolute top-0 right-0 bg-indigo-50 dark:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300 text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full z-10 shadow-sm truncate max-w-[120px]">
+                                        {student.condition}
+                                    </div>
+                                )}
                             </div>
                             <div className="mt-4">
                                 <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">{student.name}</h3>
@@ -300,6 +311,51 @@ export default function StudentsPage() {
                                     {ageError}
                                 </p>
                             )}
+                        </div>
+
+                        {/* Condition / Disability Field */}
+                        <div>
+                            <label className="mb-2 block text-sm font-semibold text-slate-900 dark:text-slate-200">Conditions / Special Needs</label>
+
+                            {/* Preset Badges */}
+                            <div className="flex flex-wrap gap-2 mb-3">
+                                {['None', 'ADHD', 'Autism', 'Dyslexia', 'Anxiety'].map((cond) => {
+                                    const isSelected = cond === 'None' ? newConditions.length === 0 && !customCondition : newConditions.includes(cond);
+                                    return (
+                                        <button
+                                            key={cond}
+                                            type="button"
+                                            onClick={() => {
+                                                if (cond === 'None') {
+                                                    setNewConditions([]);
+                                                    setCustomCondition('');
+                                                } else {
+                                                    setNewConditions(prev =>
+                                                        prev.includes(cond) ? prev.filter(c => c !== cond) : [...prev, cond]
+                                                    );
+                                                }
+                                            }}
+                                            className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${isSelected
+                                                ? 'bg-indigo-100 border-indigo-300 text-indigo-700 dark:bg-indigo-900/40 dark:border-indigo-700 dark:text-indigo-300 shadow-sm'
+                                                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 dark:bg-slate-800/80 dark:border-slate-700 dark:text-slate-400 dark:hover:bg-slate-800'
+                                                }`}
+                                        >
+                                            {cond}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Custom Condition Input */}
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="text"
+                                    value={customCondition}
+                                    onChange={(e) => setCustomCondition(e.target.value)}
+                                    placeholder="Add custom condition (e.g. PTSD)..."
+                                    className="w-full text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent dark:bg-slate-900/50 dark:text-slate-100 px-4 py-2 outline-none transition-all placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                                />
+                            </div>
                         </div>
 
                         {/* Personality Sliders */}
