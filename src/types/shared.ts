@@ -26,6 +26,12 @@ export interface StudentResponse {
     mood: 'attentive' | 'distracted' | 'confused' | 'excited';
 }
 
+export interface PreProcessorResponse {
+    isProcessed: boolean;
+    extractedContext: string | null;
+    remainingBuffer: string;
+}
+
 export interface OrchestratorResponse {
     responses: StudentResponse[];
 }

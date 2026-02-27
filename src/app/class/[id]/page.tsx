@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { mockClasses, mockStudents } from '@/lib/mockData';
 import { Student } from '@/types/shared';
 import { toast } from 'sonner';
-import { Play, Square, Save, UserPlus, Hand, ArrowLeft, Clock } from 'lucide-react';
+import { Play, Square, Save, UserPlus, Hand, ArrowLeft, Clock, Mic, MicOff } from 'lucide-react';
 import Link from 'next/link';
+import { useAzureSTT } from '@/hooks/useAzureSTT';
 
 export default function VirtualClassroom() {
     const params = useParams();
@@ -20,6 +21,9 @@ export default function VirtualClassroom() {
     const [students, setStudents] = useState<Student[]>(initialClass.students);
     const [isPlaying, setIsPlaying] = useState(false);
     const [seconds, setSeconds] = useState(0);
+
+    // Azure STT Hook
+    const { isListening, startListening, stopListening, fullTranscript, stableBuffer, setStableBuffer } = useAzureSTT({ language: 'en-US' });
 
     // Timer simulation
     useEffect(() => {
@@ -39,6 +43,71 @@ export default function VirtualClassroom() {
         return () => clearInterval(interval);
     }, [isPlaying]);
 
+    // Orchestrator Integration
+    const [isProcessing, setIsProcessing] = useState(false);
+    const lastBufferRef = useRef('');
+
+    useEffect(() => {
+        if (!isPlaying || !stableBuffer || isProcessing || stableBuffer === lastBufferRef.current) return;
+
+        const processBuffer = async () => {
+            setIsProcessing(true);
+            lastBufferRef.current = stableBuffer;
+
+            try {
+                const response = await fetch('/api/orchestrator', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sessionId: classId,
+                        students,
+                        teacherTranscriptChunk: stableBuffer
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.isProcessed) {
+                        // Replace the processed part of the buffer with the remaining
+                        setStableBuffer(data.remainingBuffer);
+                        // Make sure we won't get stuck ignoring the new buffer
+                        lastBufferRef.current = '';
+
+                        // Update students based on orchestrator response
+                        if (data.responses && data.responses.length > 0) {
+                            setStudents(prev => {
+                                const updated = [...prev];
+                                data.responses.forEach((res: any) => {
+                                    const idx = updated.findIndex(s => s.id === res.studentId);
+                                    if (idx !== -1) {
+                                        updated[idx] = {
+                                            ...updated[idx],
+                                            moodScore: res.newEngagement,
+                                        };
+                                        if (res.spoke && res.message) {
+                                            toast(`${updated[idx].name} says:`, { description: res.message, duration: 4000 });
+                                        }
+                                    }
+                                });
+                                return updated;
+                            });
+                        }
+                    } else if (data.remainingBuffer !== undefined) {
+                        // Not enough context yet. Buffer stays the same or grows pending next STT update.
+                    }
+                }
+            } catch (err) {
+                console.error("Orchestrator sync failed", err);
+            } finally {
+                setIsProcessing(false);
+            }
+        };
+
+        processBuffer();
+    }, [stableBuffer, isPlaying, isProcessing, classId, students]); // Wait, students in deps might cause a loop or send old data. 
+    // Actually, we do want the latest students sent, but we don't want to re-trigger if trailing buffer hasn't changed.
+    // The `stableBuffer === lastBufferRef.current` check guards against that!
+
     const formatTime = (totalSeconds: number) => {
         const m = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
         const s = (totalSeconds % 60).toString().padStart(2, '0');
@@ -47,6 +116,7 @@ export default function VirtualClassroom() {
 
     const handleTogglePlay = () => {
         if (isPlaying) {
+            stopListening();
             // Stopping the simulation redirects to the diary/report
             toast.success("Simulation Ended", { description: "Preparing virtual diary..." });
             setTimeout(() => {
@@ -54,7 +124,8 @@ export default function VirtualClassroom() {
             }, 800);
         } else {
             setIsPlaying(true);
-            toast.info("Simulation Started", { description: "The virtual class has begun." });
+            startListening();
+            toast.info("Simulation Started", { description: "The virtual class has begun. Microphone active." });
         }
     };
 
@@ -231,27 +302,69 @@ export default function VirtualClassroom() {
                     </div>
                 </aside>
 
+                {/* Transcript Overlay (Bottom Left) */}
+                {isPlaying && (
+                    <div className="absolute bottom-6 left-6 z-30 pointer-events-none max-w-lg w-full">
+                        <AnimatePresence>
+                            {fullTranscript && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: 20 }}
+                                    className="bg-slate-900/80 backdrop-blur-md text-white p-4 rounded-2xl shadow-2xl border border-slate-700 pointer-events-auto"
+                                >
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                                        <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">Tanár (Élő Átirat)</span>
+                                    </div>
+                                    <p className="text-sm leading-relaxed font-medium">
+                                        {fullTranscript}
+                                        <span className="animate-pulse">_</span>
+                                    </p>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                )}
+
                 {/* Floating Bottom Control Bar */}
                 <div className="absolute bottom-6 left-0 right-0 md:right-80 flex justify-center z-30 px-6 pointer-events-none">
                     <motion.div
-                        className="glass-panel px-6 py-4 border-slate-200 shadow-xl flex items-center gap-6 pointer-events-auto"
+                        className="glass-panel px-6 py-4 border-slate-200 shadow-xl flex items-center gap-4 pointer-events-auto"
                         initial={{ y: 50, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                     >
-                        {/* The primary interaction - Big Play/Stop button */}
-                        <button
-                            onClick={handleTogglePlay}
-                            className={`flex items-center gap-3 px-8 py-4 rounded-[1.5rem] font-bold text-lg shadow-md transition-all active:scale-95 ${isPlaying
-                                ? 'bg-rose-500 hover:bg-rose-600 text-white shadow-rose-500/20'
-                                : 'bg-primary hover:bg-blue-600 text-white shadow-primary/30'
-                                }`}
-                        >
-                            {isPlaying ? (
-                                <> <Square className="fill-current" size={20} /> End Simulation </>
-                            ) : (
-                                <> <Play className="fill-current" size={20} /> Start Class </>
-                            )}
-                        </button>
+                        {!isPlaying ? (
+                            <button
+                                onClick={handleTogglePlay}
+                                className="flex items-center gap-3 px-8 py-4 rounded-[1.5rem] font-bold text-lg shadow-md transition-all active:scale-95 bg-primary hover:bg-blue-600 text-white shadow-primary/30"
+                            >
+                                <Play className="fill-current" size={20} /> Start Class
+                            </button>
+                        ) : (
+                            <>
+                                <button
+                                    onClick={() => isListening ? stopListening() : startListening()}
+                                    className={`flex items-center gap-3 px-6 py-4 rounded-[1.5rem] font-bold text-lg shadow-md transition-all active:scale-95 ${isListening
+                                        ? 'bg-blue-100 hover:bg-blue-200 text-blue-700'
+                                        : 'bg-rose-100 hover:bg-rose-200 text-rose-700'
+                                        }`}
+                                >
+                                    {isListening ? (
+                                        <> <Mic className="fill-current" size={20} /> Mic On </>
+                                    ) : (
+                                        <> <MicOff className="fill-current" size={20} /> Mic Muted </>
+                                    )}
+                                </button>
+                                <div className="w-px h-8 bg-slate-200 rounded-full mx-2"></div>
+                                <button
+                                    onClick={handleTogglePlay}
+                                    className="flex items-center gap-3 px-6 py-4 rounded-[1.5rem] font-bold text-lg shadow-md transition-all active:scale-95 bg-rose-500 hover:bg-rose-600 text-white shadow-rose-500/20"
+                                >
+                                    <Square className="fill-current" size={20} /> End Simulation
+                                </button>
+                            </>
+                        )}
                     </motion.div>
                 </div>
 
