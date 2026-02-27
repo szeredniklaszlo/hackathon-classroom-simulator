@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
-import { Student, StudentType } from '@/lib/mockData';
+import { Student, StudentType } from '@/types/shared';
 import { UserPlus, X, Sparkles, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 

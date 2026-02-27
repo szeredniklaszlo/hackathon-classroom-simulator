@@ -3,7 +3,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { mockClasses, mockStudents, Student } from '@/lib/mockData';
+import { mockClasses, mockStudents } from '@/lib/mockData';
+import { Student } from '@/types/shared';
 import { toast } from 'sonner';
 import { Play, Square, Save, UserPlus, Hand, ArrowLeft, Clock } from 'lucide-react';
 import Link from 'next/link';

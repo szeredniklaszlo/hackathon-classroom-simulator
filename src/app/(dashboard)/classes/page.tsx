@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
-import { VirtualClass, Student } from '@/lib/mockData';
+import { VirtualClass, Student } from '@/types/shared';
 import { Users, Plus, X, BookOpen, Clock, Activity, Search, PlayCircle } from 'lucide-react';
 import { toast } from 'sonner';
 

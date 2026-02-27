@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { Student, VirtualClass, mockStudents, mockClasses } from '@/lib/mockData';
+import { mockStudents, mockClasses } from '@/lib/mockData';
+import { Student, VirtualClass } from '@/types/shared';
 
 interface AppState {
     students: Student[];
