@@ -58,6 +58,7 @@ export interface Student {
     personality?: string;
     prompt?: string;
     condition?: string | null;
+    avatar_url?: string;
     created_at?: string;
     currentAction?: 'LISTEN' | 'RAISE_HAND' | 'ANSWER_DIRECTLY' | 'WHISPER' | 'INTERRUPT';
     currentMessage?: string | null;

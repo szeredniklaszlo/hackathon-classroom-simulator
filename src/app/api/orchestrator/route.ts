@@ -85,7 +85,7 @@ ${basePersona}
 YOUR BEHAVIORAL PROTOCOL (CRITICAL RULES):
 1. DEFAULT STATE is SILENT. If no one asked you, or you don't care, you don't speak.
 2. If the teacher explicitly said your name ("${student.name}"), you MUST respond.
-3. If addressing the class generally, only speak if your personality dictates it (e.g. over-eager, or answering a direct question).
+3. If addressing the class generally, you should usually stay silent unless your specific personality type is highly eager, disruptive, or specifically asks you to blurt out answers.
 4. Act like a real kid. Your answers can contain mistakes or "I don't know"-ish responses.
 
 INPUT CONTEXT:
@@ -100,23 +100,41 @@ Directly addressed to you: ${isAddressed}
 ----------------------------------------------
 
 TASK:
-Output EXACTLY AND ONLY what you say out loud. Do not include quotes, actions, or metadata. If you stay silent, return a completely empty response.`
+Decide if you will speak out loud right now.
+- IF YES: Output EXACTLY AND ONLY the text you say out loud. No quotes, no actions, no metadata.
+- IF NO: Output EXACTLY the word: [SILENCE]`
                                 }
                             ]
                         });
 
-                        let spokenText = "";
+                        let rawSpokenText = "";
+                        let streamBuffer = "";
+                        const silenceToken = "[SILENCE]";
+
                         for await (const chunk of textStreamResponse) {
                             const text = chunk.choices[0]?.delta?.content || "";
                             if (text) {
-                                spokenText += text;
-                                controller.enqueue(encoder.encode(JSON.stringify({
-                                    type: 'chunk',
-                                    studentId: student.id,
-                                    text
-                                }) + '\n'));
+                                rawSpokenText += text;
+                                streamBuffer += text;
+
+                                // Check if the stream BUFFER is potentially building "[SILENCE]"
+                                if (silenceToken.startsWith(streamBuffer)) {
+                                    // It matches the start of [SILENCE]. Wait for more chunks.
+                                    continue;
+                                } else {
+                                    // It deviated from [SILENCE]. Flush the buffer.
+                                    controller.enqueue(encoder.encode(JSON.stringify({
+                                        type: 'chunk',
+                                        studentId: student.id,
+                                        text: streamBuffer
+                                    }) + '\n'));
+                                    streamBuffer = ""; // Reset buffer after flushing
+                                }
                             }
                         }
+
+                        // Clean up spoken text for the second LLM call
+                        const spokenText = rawSpokenText.trim().replace(/\[SILENCE\]/g, "").trim();
 
                         // --- CALL 2: GENERATE METADATA IN JSON (Non-streaming) ---
                         const metaResponse = await client.chat.completions.create({
