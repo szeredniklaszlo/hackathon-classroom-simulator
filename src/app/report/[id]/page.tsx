@@ -575,7 +575,7 @@ export default function VirtualDiary() {
                             </button>
                         </div>
                         <div className="space-y-4">
-                            {transcript.length > 0 ? transcript.map((entry, idx) => (
+                            {transcript.length > 0 ? transcript.filter(e => e.speaker !== '__snapshot__').map((entry, idx) => (
                                 <motion.div
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}

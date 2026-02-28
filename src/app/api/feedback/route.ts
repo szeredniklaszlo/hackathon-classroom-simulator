@@ -36,7 +36,9 @@ export async function POST(request: Request) {
         // Format transcript for the prompt
         let formattedTranscript = "";
         transcript.forEach((entry: TranscriptEntry) => {
-            formattedTranscript += `[${entry.timestamp}] ${entry.speaker}: ${entry.text} ${entry.emotion ? '(Emotion: ' + entry.emotion + ')' : ''}\n`;
+            if (entry.speaker !== '__snapshot__') {
+                formattedTranscript += `[${entry.timestamp}] ${entry.speaker}: ${entry.text} ${entry.emotion ? '(Emotion: ' + entry.emotion + ')' : ''}\n`;
+            }
         });
 
         const prompt = `You are an educational expert and AI Coach providing feedback to teachers on their performance in a simulated classroom.
