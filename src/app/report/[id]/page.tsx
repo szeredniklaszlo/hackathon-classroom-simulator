@@ -6,9 +6,10 @@ import { motion } from 'framer-motion';
 import { mockTranscript, mockAIFeedback } from '@/lib/mockData';
 import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
-import { Download, Save, CheckCircle2, AlertCircle, Lightbulb, ArrowLeft, PenLine, RefreshCcw } from 'lucide-react';
+import { Download, Save, CheckCircle2, AlertCircle, Lightbulb, ArrowLeft, PenLine, RefreshCcw, Clock, TrendingUp, TrendingDown, Activity } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
 import { TranscriptEntry } from '@/types/shared';
@@ -34,6 +35,10 @@ export default function VirtualDiary() {
     // AI Feedback State
     const [aiFeedback, setAiFeedback] = useState<{ wentWell: string[], toImprove: string[], suggestions: string[] } | null>(null);
     const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
+
+    // Statistics State
+    const [sessionStats, setSessionStats] = useState<any>(null);
+    const [isLoadingStats, setIsLoadingStats] = useState(false);
 
     // Check Supabase auth state on mount
     useEffect(() => {
@@ -72,11 +77,53 @@ export default function VirtualDiary() {
                 .insert([{
                     user_id: user.id,
                     class_id: classId,
-                    transcript: transcript, // This is the state array containing the conversation
+                    transcript: transcript,
                     notes: notes
                 }]);
 
             if (dbError) throw dbError;
+
+            // Also save structured session statistics if they were computed
+            if (sessionStats) {
+                const { data: sessionData, error: sessionError } = await supabase
+                    .from('class_sessions')
+                    .insert([{
+                        class_id: classId,
+                        user_id: user.id,
+                        duration_seconds: sessionStats.duration_seconds,
+                        average_satisfaction: sessionStats.average_satisfaction,
+                    }])
+                    .select('id')
+                    .single();
+
+                if (!sessionError && sessionData) {
+                    const sessionId = sessionData.id;
+
+                    if (sessionStats.studentStats && sessionStats.studentStats.length > 0) {
+                        const studentInserts = sessionStats.studentStats.map((s: any) => ({
+                            session_id: sessionId,
+                            student_id: s.student_id,
+                            student_name: s.student_name,
+                            average_satisfaction: s.average_satisfaction
+                        }));
+                        await supabase.from('student_session_stats').insert(studentInserts);
+                    }
+
+                    if (sessionStats.timeline && sessionStats.timeline.length > 0) {
+                        const baseTime = Date.now() - (sessionStats.duration_seconds * 1000);
+                        const timelineInserts = sessionStats.timeline.map((t: any, idx: number) => {
+                            const eventTime = new Date(baseTime + (idx * 60000));
+                            return {
+                                session_id: sessionId,
+                                student_id: 'class_average',
+                                mood_score: t.average_satisfaction,
+                                recorded_at: eventTime.toISOString()
+                            };
+                        });
+                        await supabase.from('satisfaction_events').insert(timelineInserts);
+                    }
+                }
+            }
 
             toast.success("Successfully saved to database", {
                 description: "The class transcript and notes have been saved to your profile.",
@@ -95,6 +142,7 @@ export default function VirtualDiary() {
 
     const handleLoadLiveTranscript = async () => {
         setIsLoadingTranscript(true);
+        setIsLoadingStats(true);
         try {
             const res = await fetch(`/api/transcripts?classId=${classId}`);
             if (res.ok) {
@@ -105,6 +153,85 @@ export default function VirtualDiary() {
 
                     // Generate AI Feedback based on transcript
                     await generateAIFeedback(data.transcript);
+
+                    // Compute Live Class Statistics from Transcript
+                    const emotionToScore = (emotion?: string) => {
+                        if (emotion === 'happy') return 90;
+                        if (emotion === 'excited') return 95;
+                        if (emotion === 'neutral') return 60;
+                        if (emotion === 'confused') return 30;
+                        if (emotion === 'anxious') return 20;
+                        if (emotion === 'bored') return 20;
+                        return null;
+                    };
+
+                    const timelineMap = new Map<string, { total: number, count: number }>();
+                    const studentStatsMap = new Map<string, { total: number, count: number, max: number, min: number }>();
+
+                    let firstTimeMs = 0;
+                    let lastTimeMs = 0;
+
+                    data.transcript.forEach((entry: TranscriptEntry, idx: number) => {
+                        const timeMatch = entry.timestamp.match(/(\d+):(\d+)\s*(AM|PM)/i);
+                        let timeMs = Date.now();
+                        if (timeMatch) {
+                            let hours = parseInt(timeMatch[1]);
+                            const mins = parseInt(timeMatch[2]);
+                            const ampm = timeMatch[3].toUpperCase();
+                            if (ampm === 'PM' && hours < 12) hours += 12;
+                            if (ampm === 'AM' && hours === 12) hours = 0;
+                            const d = new Date();
+                            d.setHours(hours, mins, 0, 0);
+                            timeMs = d.getTime();
+                        }
+                        if (idx === 0) firstTimeMs = timeMs;
+                        lastTimeMs = timeMs;
+
+                        if (entry.emotion) {
+                            const score = emotionToScore(entry.emotion);
+                            if (score !== null) {
+                                const minuteKey = entry.timestamp;
+                                if (!timelineMap.has(minuteKey)) timelineMap.set(minuteKey, { total: 0, count: 0 });
+                                timelineMap.get(minuteKey)!.total += score;
+                                timelineMap.get(minuteKey)!.count += 1;
+
+                                const studentEntry = studentStatsMap.get(entry.speaker);
+                                if (!studentEntry) {
+                                    studentStatsMap.set(entry.speaker, { total: score, count: 1, max: score, min: score });
+                                } else {
+                                    studentEntry.total += score;
+                                    studentEntry.count += 1;
+                                    if (score > studentEntry.max) studentEntry.max = score;
+                                    if (score < studentEntry.min) studentEntry.min = score;
+                                }
+                            }
+                        }
+                    });
+
+                    const timeline = Array.from(timelineMap.entries()).map(([minute, stats]) => ({
+                        minute,
+                        average_satisfaction: Math.round(stats.total / stats.count)
+                    }));
+
+                    const studentStats = Array.from(studentStatsMap.entries()).map(([name, stats]) => ({
+                        student_id: name,
+                        student_name: name,
+                        average_satisfaction: Math.round(stats.total / stats.count),
+                        max_satisfaction: stats.max,
+                        min_satisfaction: stats.min
+                    })).sort((a, b) => b.average_satisfaction - a.average_satisfaction);
+
+                    let durationSeconds = Math.round((lastTimeMs - firstTimeMs) / 1000);
+                    if (durationSeconds <= 0) durationSeconds = 60 * timeline.length;
+
+                    if (timeline.length > 0) {
+                        setSessionStats({
+                            duration_seconds: durationSeconds,
+                            timeline,
+                            studentStats,
+                            average_satisfaction: Math.round(timeline.reduce((acc, t) => acc + t.average_satisfaction, 0) / timeline.length)
+                        });
+                    }
                 } else {
                     toast.info("No live transcript found for this session.", { description: "Showing mock data instead." });
                 }
@@ -116,6 +243,7 @@ export default function VirtualDiary() {
             toast.error("Connection error while loading transcript.");
         } finally {
             setIsLoadingTranscript(false);
+            setIsLoadingStats(false);
         }
     };
 
@@ -250,9 +378,87 @@ export default function VirtualDiary() {
                         <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 text-sm font-medium text-slate-500 dark:text-slate-400">
                             <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full"><span className="text-lg">{currentClass?.emoji || '📚'}</span> {currentClass?.name || 'Ismeretlen Osztály'}</span>
                             <span className="bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">{currentClass?.students?.length || 0} Students</span>
+                            {sessionStats?.durationSeconds && (
+                                <span className="flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1 rounded-full text-indigo-700 dark:text-indigo-400 font-bold border border-indigo-100 dark:border-indigo-800/50">
+                                    <Clock size={16} />
+                                    {Math.floor(sessionStats.durationSeconds / 60)} perc {sessionStats.durationSeconds % 60} mp
+                                </span>
+                            )}
                             <span className="bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">{new Date().toLocaleDateString()}</span>
                         </div>
                     </div>
+
+                    {/* Class Statistics Overview - Recharts */}
+                    {sessionStats && (
+                        <div className="mb-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            {/* Most/Least Satisfied */}
+                            <div className="lg:col-span-1 flex flex-col gap-4">
+                                <div className="bg-green-50 dark:bg-green-900/10 border border-green-200 dark:border-green-800/30 p-5 rounded-2xl flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-green-100 dark:bg-green-800/50 rounded-full flex items-center justify-center text-green-600 dark:text-green-400">
+                                        <TrendingUp size={24} />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-bold text-green-600 dark:text-green-500 uppercase tracking-wider mb-1">Most Satisfied</p>
+                                        <p className="text-slate-900 dark:text-slate-100 font-bold">
+                                            {sessionStats.studentStats?.[0]?.student_name || 'N/A'}
+                                        </p>
+                                        <p className="text-sm text-green-600 dark:text-green-400 font-bold">
+                                            {sessionStats.studentStats?.[0]?.max_satisfaction ?? sessionStats.studentStats?.[0]?.average_satisfaction ?? 0}% peak satisfaction
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="bg-rose-50 dark:bg-rose-900/10 border border-rose-200 dark:border-rose-800/30 p-5 rounded-2xl flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-rose-100 dark:bg-rose-800/50 rounded-full flex items-center justify-center text-rose-600 dark:text-rose-400">
+                                        <TrendingDown size={24} />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-bold text-rose-600 dark:text-rose-500 uppercase tracking-wider mb-1">Least Satisfied</p>
+                                        <p className="text-slate-900 dark:text-slate-100 font-bold">
+                                            {sessionStats.studentStats?.[sessionStats.studentStats.length - 1]?.student_name || 'N/A'}
+                                        </p>
+                                        <p className="text-sm text-rose-600 dark:text-rose-400 font-bold">
+                                            {sessionStats.studentStats?.[sessionStats.studentStats.length - 1]?.min_satisfaction ?? sessionStats.studentStats?.[sessionStats.studentStats.length - 1]?.average_satisfaction ?? 0}% lowest satisfaction
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Timeline Chart */}
+                            <div className="lg:col-span-2 bg-slate-50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700/50 p-6 rounded-2xl flex flex-col">
+                                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
+                                    <Activity size={18} className="text-indigo-500" />
+                                    Osztály elégedettség alakulása
+                                </h3>
+                                <div className="flex-1 w-full min-h-[180px]">
+                                    {sessionStats.timeline && sessionStats.timeline.length > 0 ? (
+                                        <ResponsiveContainer width="100%" height="100%">
+                                            <AreaChart data={sessionStats.timeline} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                                <defs>
+                                                    <linearGradient id="colorSatisfaction" x1="0" y1="0" x2="0" y2="1">
+                                                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                                                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                                    </linearGradient>
+                                                </defs>
+                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.2} />
+                                                <XAxis dataKey="minute" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#64748b' }} dy={10} />
+                                                <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+                                                <Tooltip
+                                                    contentStyle={{ borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', backgroundColor: 'var(--tw-colors-white, #fff)', color: '#0f172a' }}
+                                                    labelStyle={{ color: '#475569', fontWeight: 'bold', marginBottom: '4px' }}
+                                                />
+                                                <Area type="monotone" dataKey="average_satisfaction" name="Class Satisfaction" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorSatisfaction)" dot={{ r: 4, fill: '#6366f1', strokeWidth: 0 }} activeDot={{ r: 6 }} />
+                                            </AreaChart>
+                                        </ResponsiveContainer>
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500 text-sm">
+                                            Nincs elegendő adat a grafikonhoz
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                         {/* Teacher Notes Area */}

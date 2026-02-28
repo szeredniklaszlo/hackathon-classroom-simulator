@@ -189,10 +189,55 @@ export default function VirtualClassroom() {
 
                 if (!response.ok) throw new Error("Orchestrator request failed");
 
-                // Check if JSON fallback (i.e. not processed)
+                // Check if JSON fallback (i.e. not processed or from another branch)
                 const contentType = response.headers.get('content-type') || '';
                 if (contentType.includes('application/json')) {
                     const data = await response.json();
+
+                    // Handle non-streaming response array
+                    if (data.responses && data.responses.length > 0) {
+                        const newEntries: any[] = [];
+                        const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                        // Extract transcript entries first
+                        data.responses.forEach((res: any) => {
+                            const student = students.find(s => s.id === res.studentId);
+                            if (student && res.action !== 'LISTEN' && res.action !== 'RAISE_HAND' && res.message) {
+                                newEntries.push({
+                                    id: `s-${res.studentId}-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+                                    speaker: student.name,
+                                    text: res.message,
+                                    timestamp,
+                                    emotion: res.newEngagement > 70 ? 'happy' : res.newEngagement < 40 ? 'confused' : 'neutral'
+                                });
+                                toast(`${student.name} says:`, { description: res.message, duration: 4000 });
+                            }
+                        });
+
+                        if (newEntries.length > 0) {
+                            setLiveTranscript(prev => [...prev, ...newEntries]);
+                        }
+
+                        // Now update students pure state
+                        setStudents(prev => {
+                            const updated = [...prev];
+                            updated.forEach(s => {
+                                const res = data.responses.find((r: any) => r.studentId === s.id);
+                                if (res) {
+                                    s.currentAction = res.action || 'LISTEN';
+                                    s.currentMessage = res.message || null;
+                                    s.moodScore = res.newEngagement ?? s.moodScore;
+                                    s.raisedHand = res.action === 'RAISE_HAND';
+                                } else {
+                                    s.currentAction = 'LISTEN';
+                                    s.currentMessage = null;
+                                    s.raisedHand = false;
+                                }
+                            });
+                            return updated;
+                        });
+                    }
+
                     if (!data.isProcessed) {
                         setStableBuffer(data.remainingBuffer);
                     }
@@ -423,14 +468,6 @@ export default function VirtualClassroom() {
                             Live: {formatTime(seconds)}
                         </div>
                     )}
-                    <button onClick={handleSaveRoster} className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-primary dark:hover:text-indigo-400 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 px-3 py-2 rounded-lg text-sm font-semibold border border-transparent hover:border-slate-200 dark:hover:border-slate-700">
-                        <Save size={18} />
-                        <span className="hidden sm:inline">Save Roster</span>
-                    </button>
-                    <button onClick={handleAddStudent} className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors px-3 py-2 rounded-lg text-sm font-semibold">
-                        <UserPlus size={18} />
-                        <span className="hidden sm:inline">Add Student</span>
-                    </button>
                 </div>
             </header>
 
