@@ -13,6 +13,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
 import { TranscriptEntry } from '@/types/shared';
+import { BookOpen } from 'lucide-react';
 
 export default function VirtualDiary() {
     const params = useParams();
@@ -29,7 +30,8 @@ export default function VirtualDiary() {
     const [isExporting, setIsExporting] = useState(false);
     const [isGuest, setIsGuest] = useState(true); // default: treat as guest until resolved
     const [authChecked, setAuthChecked] = useState(false);
-    const [transcript, setTranscript] = useState<TranscriptEntry[]>(mockTranscript);
+    const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
+    const [transcriptLoaded, setTranscriptLoaded] = useState(false);
     const [isLoadingTranscript, setIsLoadingTranscript] = useState(false);
 
     // AI Feedback State
@@ -530,7 +532,7 @@ export default function VirtualDiary() {
                             </div>
 
                             {!aiFeedback && !isGeneratingFeedback ? (
-                                <div className="p-8 text-center bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700/50 h-full flex flex-col justify-center items-center">
+                                <div className="p-8 text-center bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700/50 flex flex-col justify-center items-center">
                                     <Lightbulb size={32} className="text-slate-300 dark:text-slate-600 mb-3" />
                                     <p className="text-slate-500 dark:text-slate-400 text-sm">Use &quot;Load Live Transcript&quot; to fetch your simulation data and generate your AI Coach feedback.</p>
                                 </div>
@@ -565,52 +567,106 @@ export default function VirtualDiary() {
                     <div>
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pt-6 border-t border-slate-100 dark:border-slate-800">
                             <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">Class Transcript</h3>
-                            <button
-                                onClick={handleLoadLiveTranscript}
-                                disabled={isLoadingTranscript}
-                                className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 border border-indigo-100 dark:border-indigo-800 rounded-lg text-sm font-bold transition-colors disabled:opacity-50"
-                            >
-                                <RefreshCcw size={16} className={isLoadingTranscript ? 'animate-spin' : ''} />
-                                {isLoadingTranscript ? 'Loading...' : 'Load Live Transcript'}
-                            </button>
-                        </div>
-                        <div className="space-y-4">
-                            {transcript.length > 0 ? transcript.map((entry, idx) => (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: idx * 0.1 }}
-                                    key={entry.id}
-                                    className={`flex flex-col ${entry.speaker === 'Teacher' ? 'items-end' : 'items-start'}`}
+                            {transcriptLoaded && (
+                                <button
+                                    onClick={handleLoadLiveTranscript}
+                                    disabled={isLoadingTranscript}
+                                    className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 border border-indigo-100 dark:border-indigo-800 rounded-lg text-sm font-bold transition-colors disabled:opacity-50"
                                 >
-                                    <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 mb-1 px-2 uppercase tracking-wider">
-                                        {entry.speaker} • {entry.timestamp}
-                                    </span>
+                                    <RefreshCcw size={16} className={isLoadingTranscript ? 'animate-spin' : ''} />
+                                    {isLoadingTranscript ? 'Refreshing...' : 'Refresh Transcript'}
+                                </button>
+                            )}
+                        </div>
 
-                                    <div className={`max-w-[85%] px-5 py-3 rounded-2xl text-sm leading-relaxed
-                    ${entry.speaker === 'Teacher'
-                                            ? 'bg-primary text-white rounded-tr-sm shadow-md shadow-blue-500/10'
-                                            : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-tl-sm border border-slate-200 dark:border-slate-700'
-                                        }
-                  `}>
-                                        {entry.text}
+                        {/* Gate: not yet loaded */}
+                        {!transcriptLoaded ? (
+                            <div className="relative rounded-3xl overflow-hidden min-h-[320px] flex items-center justify-center">
+                                {/* Blurred ghost rows */}
+                                <div className="absolute inset-0 pointer-events-none select-none blur-sm opacity-40" aria-hidden>
+                                    {[
+                                        { side: 'end', w: '70%' },
+                                        { side: 'start', w: '55%' },
+                                        { side: 'end', w: '60%' },
+                                        { side: 'start', w: '75%' },
+                                        { side: 'end', w: '50%' },
+                                        { side: 'start', w: '65%' },
+                                    ].map((row, i) => (
+                                        <div key={i} className={`flex flex-col items-${row.side} mb-4 px-4`}>
+                                            <div className="h-2.5 rounded-full bg-slate-300 dark:bg-slate-600 mb-2" style={{ width: '60px' }} />
+                                            <div
+                                                className={`h-10 rounded-2xl ${row.side === 'end'
+                                                    ? 'bg-sky-300 dark:bg-sky-700'
+                                                    : 'bg-slate-200 dark:bg-slate-700'
+                                                    }`}
+                                                style={{ width: row.w }}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Dark gradient overlay */}
+                                <div className="absolute inset-0 bg-gradient-to-t from-white via-white/80 to-transparent dark:from-slate-950 dark:via-slate-950/80 dark:to-transparent" />
+
+                                {/* Centered CTA */}
+                                <div className="relative z-10 flex flex-col items-center gap-4 text-center px-6">
+                                    <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white dark:bg-slate-800 shadow-lg ring-1 ring-slate-200 dark:ring-slate-700">
+                                        <RefreshCcw size={24} className="text-indigo-500" />
                                     </div>
+                                    <div>
+                                        <p className="font-bold text-slate-800 dark:text-slate-100 text-base mb-1">Transcript not loaded</p>
+                                        <p className="text-sm text-slate-500 dark:text-slate-400">Load the live transcript from your session to see the full conversation replay.</p>
+                                    </div>
+                                    <button
+                                        onClick={() => { handleLoadLiveTranscript(); setTranscriptLoaded(true); }}
+                                        disabled={isLoadingTranscript}
+                                        className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 py-3 rounded-2xl shadow-lg shadow-indigo-500/20 transition-all hover:scale-[1.03] disabled:opacity-50 disabled:scale-100"
+                                    >
+                                        <RefreshCcw size={16} className={isLoadingTranscript ? 'animate-spin' : ''} />
+                                        {isLoadingTranscript ? 'Loading...' : 'Load Live Transcript'}
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            /* Loaded state — chat bubbles */
+                            <div className="space-y-4">
+                                {transcript.length > 0 ? transcript.map((entry, idx) => (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: idx * 0.05 }}
+                                        key={entry.id}
+                                        className={`flex flex-col ${entry.speaker === 'Teacher' ? 'items-end' : 'items-start'}`}
+                                    >
+                                        <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500 mb-1 px-2 uppercase tracking-wider">
+                                            {entry.speaker} • {entry.timestamp}
+                                        </span>
 
-                                    {/* Emotion/Reaction tag for students */}
-                                    {entry.speaker !== 'Teacher' && entry.emotion && (
-                                        <span className={`text-[10px] font-bold mt-1.5 px-2 py-0.5 rounded-full border opacity-80
+                                        <div className={`max-w-[85%] px-5 py-3 rounded-2xl text-sm leading-relaxed
+                    ${entry.speaker === 'Teacher'
+                                                ? 'bg-primary text-white rounded-tr-sm shadow-md shadow-blue-500/10'
+                                                : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-tl-sm border border-slate-200 dark:border-slate-700'
+                                            }
+                  `}>
+                                            {entry.text}
+                                        </div>
+
+                                        {/* Emotion/Reaction tag for students */}
+                                        {entry.speaker !== 'Teacher' && entry.emotion && (
+                                            <span className={`text-[10px] font-bold mt-1.5 px-2 py-0.5 rounded-full border opacity-80
                         ${entry.emotion === 'happy' ? 'text-green-600 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' : ''}
                         ${entry.emotion === 'confused' ? 'text-rose-600 bg-rose-50 dark:bg-rose-900/20 border-rose-200 dark:border-rose-800' : ''}
                         ${entry.emotion === 'neutral' ? 'text-slate-500 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700' : ''}
                      `}>
-                                            Reacted: {entry.emotion}
-                                        </span>
-                                    )}
-                                </motion.div>
-                            )) : (
-                                <p className="text-slate-500 dark:text-slate-400 italic text-center py-8">No conversation recorded during this class.</p>
-                            )}
-                        </div>
+                                                Reacted: {entry.emotion}
+                                            </span>
+                                        )}
+                                    </motion.div>
+                                )) : (
+                                    <p className="text-slate-500 dark:text-slate-400 italic text-center py-8">No conversation recorded during this class.</p>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                 </div>
