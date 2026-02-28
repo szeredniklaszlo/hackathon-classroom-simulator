@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Student, TranscriptEntry } from '@/types/shared';
 import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
-import { Play, Square, Save, UserPlus, Hand, ArrowLeft, Clock, Mic, MicOff } from 'lucide-react';
+import { Play, Square, Save, UserPlus, Hand, ArrowLeft, Clock, Mic, MicOff, Activity } from 'lucide-react';
 import Link from 'next/link';
 import { useAzureSTT } from '@/hooks/useAzureSTT';
 import StudentCard, { guessGender } from '@/components/classroom/StudentCard';
@@ -181,10 +181,10 @@ export default function VirtualClassroom() {
             lastBufferRef.current = stableBuffer;
 
             try {
-                // Mivel a diákok a class object-ben egy snapshot-ként lehetnek lementve (amiben esetleg nincs benne az utólag generált prompt),
-                // ezért frissítsük be a globális students listából a promptokat.
+                // Since students in the class object might be saved as a snapshot (which might not include the subsequently generated prompt),
+                // refresh the prompts from the global students list.
                 const updatedStudentsForOrchestrator = students.map(s => {
-                    const baseId = s.id.split('-')[0]; // Ha "uuid-1" formátumú a duplikált diák
+                    const baseId = s.id.split('-')[0]; // If the duplicated student is in "uuid-1" format
                     const baseStudent = globalStudents.find(g => g.id === baseId || g.id === s.id);
                     return {
                         ...s,
@@ -607,7 +607,7 @@ export default function VirtualClassroom() {
                                 >
                                     <div className="flex items-center gap-2 mb-2">
                                         <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                                        <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">Tanár (Élő Átirat)</span>
+                                        <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">Teacher (Live Transcript)</span>
                                     </div>
                                     <p className="text-sm leading-relaxed font-medium">
                                         {fullTranscript}

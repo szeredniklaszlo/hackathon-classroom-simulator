@@ -59,14 +59,14 @@ export async function POST(request: Request) {
                     messages: [
                         {
                             role: 'system',
-                            content: `Te egy nagyon profi Prompt Engineer vagy, aki AI alapú oktatási szimulátorhoz készít rendkívül részletes "System Prompt"-ot. 
-Készítsd el a tanuló system promptját EGY/ELSŐ SZEMÉLYBE ("You are..."). 
-A prompt tartalmazza:
-- Milyen a tanuló háttérsztorija, személyisége és viselkedése a tanórán.
-- Hogyan reagál kérdésekre, hogyan kommunikál.
-- Milyen speciális betegségei vannak, azok hogyan jelennek meg (pl. figyelemzavar).
-- Mit tesz, ha unatkozik, ha dicséri a tanár, ha felszólítják de nem tudja.
-A válaszodban CSAK ÉS KIZÁRÓLAG az elkészített teljes angol nyelvű system prompt szerepeljen, semmi más.`
+                            content: `You are a highly professional Prompt Engineer creating a extremely detailed "System Prompt" for an AI-based educational simulator.
+Create the student's system prompt in FAST/FIRST PERSON ("You are...").
+The prompt should include:
+- The student's background story, personality, and classroom behavior.
+- How they react to questions, how they communicate.
+- Any special conditions they have and how they manifest (e.g., attention disorder).
+- What they do if bored, if praised by the teacher, or if called on but don't know the answer.
+In your response, ONLY the completed full English system prompt should appear, nothing else.`
                         },
                         {
                             role: 'user',
@@ -87,12 +87,12 @@ Please generate the detailed persona system prompt in English.`
                 });
 
                 generatedPrompt = openAiResponse.choices?.[0]?.message?.content?.trim() || '';
-                console.log("Sikeresen generálva a prompt:", generatedPrompt.substring(0, 50) + "...");
+                console.log("Prompt successfully generated:", generatedPrompt.substring(0, 50) + "...");
             } catch (aiError) {
                 console.error("Failed to generate prompt via Azure OpenAI:", aiError);
             }
         } else {
-            console.warn("Nincs beállítva az AZURE_OPENAI_API_KEY vagy ENDPOINT a környezeti változókban!");
+            console.warn("AZURE_OPENAI_API_KEY or ENDPOINT not set in environment variables!");
         }
 
         // Insert into Supabase
@@ -176,14 +176,14 @@ export async function PATCH(request: Request) {
                     messages: [
                         {
                             role: 'system',
-                            content: `Te egy nagyon profi Prompt Engineer vagy, aki AI alapú oktatási szimulátorhoz készít rendkívül részletes "System Prompt"-ot. 
-Készítsd el a tanuló system promptját EGY/ELSŐ SZEMÉLYBE ("You are..."). 
-A prompt tartalmazza:
-- Milyen a tanuló háttérsztorija, személyisége és viselkedése a tanórán.
-- Hogyan reagál kérdésekre, hogyan kommunikál.
-- Milyen speciális betegségei vannak, azok hogyan jelennek meg (pl. figyelemzavar).
-- Mit tesz, ha unatkozik, ha dicséri a tanár, ha felszólítják de nem tudja.
-A válaszodban CSAK ÉS KIZÁRÓLAG az elkészített teljes angol nyelvű system prompt szerepeljen, semmi más.`
+                            content: `You are a highly professional Prompt Engineer creating a extremely detailed "System Prompt" for an AI-based educational simulator.
+Create the student's system prompt in FAST/FIRST PERSON ("You are...").
+The prompt should include:
+- The student's background story, personality, and classroom behavior.
+- How they react to questions, how they communicate.
+- Any special conditions they have and how they manifest (e.g., attention disorder).
+- What they do if bored, if praised by the teacher, or if called on but don't know the answer.
+In your response, ONLY the completed full English system prompt should appear, nothing else.`
                         },
                         {
                             role: 'user',

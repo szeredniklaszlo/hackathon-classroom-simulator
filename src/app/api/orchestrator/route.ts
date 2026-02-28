@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { AzureOpenAI } from 'openai';
 import { ClassroomContext, OrchestratorResponse, PreProcessorResponse } from '@/types/shared';
 
-// Segédfüggvény: megnézi, hogy a tanár szövege tartalmazza-e a diák nevét
+// Helper function: checks if the teacher's text contains the student's name
 function isDirectlyAddressed(teacherText: string, studentName: string): boolean {
     const cleanText = teacherText.toLowerCase();
     const cleanName = studentName.toLowerCase();
@@ -21,20 +21,20 @@ export async function POST(req: Request) {
             deployment: process.env.AZURE_OPENAI_DEPLOYMENT_NAME,
         });
 
-        // --- 1. PREPROCESSOR (Változatlan, csak a típusokat illesztjük) ---
-        // Feltételezzük, hogy ez ugyanaz maradt, mint a te kódodban...
+        // --- 1. PREPROCESSOR (Unchanged, just matching types) ---
+        // Assuming this remained the same as in your code...
         const preProcessorResult = await client.chat.completions.create({
             model: process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "",
             response_format: { type: "json_object" },
             messages: [
                 {
                     role: "system",
-                    content: `Te egy tanárokat segítő AI vagy. Elemezd a bejövő Speech-to-Text beszédfolyamot (Buffer).
-A feladatod, hogy eldöntsd, a tanár mondandója elérte-e azt a pontot, amire a diákoknak reagálniuk kellene (pl. feltett egy kérdést, felszólított valakit, vagy befejezett egy gondolatmenetet).
-Ha IGEN (kérdés, utasítás, befejezett mondat), akkor isProcessed = true, az extractedContext az értelmes mondat, a remainingBuffer pedig a mondaton túli maradék szöveg (többnyire "").
-Ha MÉG NEM fejezett be semmit (pl. csak "Um, so..."), akkor isProcessed = false, extractedContext = null.
-Fontos: A szöveg tartalmazhat töltelékszavakat (um, uh). Ha a szövegben van egy kérdés (pl. "what do you think?"), az mindig feldolgozandó (isProcessed: true)!
-Kimenet csak valid JSON: { "isProcessed": boolean, "extractedContext": string | null, "remainingBuffer": string }`
+                    content: `You are an AI assisting teachers. Analyze the incoming Speech-to-Text stream (Buffer).
+Your task is to decide if the teacher's speech has reached a point where students should react (e.g., asked a question, called on someone, or finished a thought).
+If YES (question, instruction, finished sentence), then isProcessed = true, extractedContext is the meaningful sentence, and remainingBuffer is the leftover text beyond the sentence (mostly "").
+If NOT YET finished anything (e.g., just "Um, so..."), then isProcessed = false, extractedContext = null.
+Important: The text may contain filler words (um, uh). If there is a question (e.g., "what do you think?"), it should always be processed (isProcessed: true)!
+Output ONLY valid JSON: { "isProcessed": boolean, "extractedContext": string | null, "remainingBuffer": string }`
                 },
                 { role: "user", content: `Buffer: "${teacherTranscriptChunk}"` }
             ]
@@ -48,16 +48,16 @@ Kimenet csak valid JSON: { "isProcessed": boolean, "extractedContext": string | 
             return NextResponse.json({ isProcessed: false, remainingBuffer: preProc.remainingBuffer, responses: [] });
         }
 
-        // Token spórolás: Az utolsó pár üzenetet rakjuk a promptba
+        // Token saving: Add the last few messages to the prompt
         const recentHistory = fullTranscript.slice(-8).map(entry => `[${entry.speaker}]: ${entry.text}`).join('\n');
 
-        // --- 2. PROCESSOR (A Multi-Agent logika, most már Streaminggel!) ---
-        console.log(`[Orchestrator] PÁRHUZAMOSAN streameljük ${students.length} tanuló válaszát...`);
+        // --- 2. PROCESSOR (Multi-Agent logic, now with Streaming!) ---
+        console.log(`[Orchestrator] Streaming responses for ${students.length} students in PARALLEL...`);
 
         const encoder = new TextEncoder();
         const stream = new ReadableStream({
             async start(controller) {
-                // Legelőször leküldjük a PreProcessor eredményét
+                // First, send the PreProcessor result
                 controller.enqueue(encoder.encode(JSON.stringify({
                     type: 'preProc',
                     isProcessed: true,
