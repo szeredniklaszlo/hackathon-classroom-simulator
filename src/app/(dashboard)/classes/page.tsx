@@ -78,7 +78,6 @@ export default function ClassesPage() {
     // Form State for creating a class
     const [newName, setNewName] = useState('');
     const [newSubject, setNewSubject] = useState('');
-    const [newEmoji, setNewEmoji] = useState('🎓');
     const [selectedStudentCounts, setSelectedStudentCounts] = useState<Record<string, number>>({});
 
     // Validation states
@@ -109,7 +108,6 @@ export default function ClassesPage() {
     const openCreateDrawer = () => {
         setNewName('');
         setNewSubject('');
-        setNewEmoji('🎓');
         setSelectedStudentCounts({});
         setSearchQuery('');
         setNameError('');
@@ -244,7 +242,6 @@ export default function ClassesPage() {
                 body: JSON.stringify({
                     name: newName,
                     subject: newSubject,
-                    emoji: newEmoji,
                     description: 'Custom created class.',
                     students: classStudents,
                 })
@@ -307,8 +304,8 @@ export default function ClassesPage() {
                             onClick={() => openViewDrawer(vClass)}
                             className="group relative flex flex-col items-start overflow-hidden rounded-2xl bg-white dark:bg-slate-800/80 p-6 text-left shadow-sm ring-1 ring-slate-100 dark:ring-slate-700/50 transition-all hover:-translate-y-1 hover:shadow-md hover:ring-primary/20 dark:hover:ring-sky-500/30"
                         >
-                            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 dark:bg-sky-900/30 text-4xl shadow-sm transition-transform group-hover:scale-105">
-                                {vClass.emoji}
+                            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 dark:bg-sky-900/30 text-sky-500 dark:text-sky-400 shadow-sm transition-transform group-hover:scale-105">
+                                <BookOpen size={32} />
                             </div>
                             <h3 className="mb-1 text-lg font-bold text-slate-900 dark:text-slate-100">{vClass.name}</h3>
                             <div className="mb-4 flex items-center gap-1.5 text-sm font-medium text-slate-500 dark:text-slate-400">
@@ -356,8 +353,8 @@ export default function ClassesPage() {
                     {drawerMode === 'view' && selectedClass && (
                         <div className="space-y-6">
                             <div className="flex items-center gap-4">
-                                <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-blue-50 dark:bg-sky-900/40 text-5xl">
-                                    {selectedClass.emoji}
+                                <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-blue-50 dark:bg-sky-900/40 text-sky-500 dark:text-sky-400">
+                                    <BookOpen size={40} />
                                 </div>
                                 <div>
                                     <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{selectedClass.name}</h3>
@@ -398,8 +395,12 @@ export default function ClassesPage() {
                                 <div className="space-y-2">
                                     {(selectedClass.students || []).map((student, idx) => (
                                         <div key={`${student.id}-${idx}`} className="flex items-center gap-3 rounded-lg border border-slate-100 dark:border-slate-800 p-2">
-                                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 text-xl">
-                                                {student.emoji}
+                                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 overflow-hidden">
+                                                <img
+                                                    src={student.avatar_url || `https://wsrv.nl/?url=${encodeURIComponent(`avatar.iran.liara.run/public/${(student.name?.split(' ')[0].toLowerCase().endsWith('a') || student.name?.split(' ')[0].toLowerCase().endsWith('e') || student.name?.split(' ')[0].toLowerCase().endsWith('i') || student.name?.split(' ')[0].toLowerCase().endsWith('y')) ? 'girl' : 'boy'}?username=` + student.name + '_' + student.age)}`}
+                                                    alt={student.name}
+                                                    className="w-full h-full object-cover"
+                                                />
                                             </div>
                                             <div className="flex-1">
                                                 <div className="font-semibold text-slate-900 dark:text-slate-100">{student.name}</div>
@@ -457,16 +458,6 @@ export default function ClassesPage() {
                                     )}
                                 </div>
 
-                                <div>
-                                    <label className="mb-1.5 block text-sm font-semibold text-slate-900 dark:text-slate-200">Class Emoji *</label>
-                                    <input
-                                        required
-                                        type="text"
-                                        value={newEmoji}
-                                        onChange={(e) => setNewEmoji(e.target.value)}
-                                        className="w-20 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent dark:bg-slate-900/50 dark:text-slate-100 px-4 py-2.5 text-center text-xl outline-none transition-all focus:border-primary dark:focus:border-sky-500 focus:ring-2 focus:ring-primary/20 dark:focus:ring-sky-500/20"
-                                    />
-                                </div>
                             </div>
 
                             <div className="border-t border-slate-100 dark:border-slate-800 pt-6">
@@ -507,7 +498,13 @@ export default function ClassesPage() {
                                                     }`}
                                             >
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-xl">{student.emoji}</span>
+                                                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-700 overflow-hidden border border-slate-200 dark:border-slate-600">
+                                                        <img
+                                                            src={student.avatar_url || `https://wsrv.nl/?url=${encodeURIComponent(`avatar.iran.liara.run/public/${(student.name?.split(' ')[0].toLowerCase().endsWith('a') || student.name?.split(' ')[0].toLowerCase().endsWith('e') || student.name?.split(' ')[0].toLowerCase().endsWith('i') || student.name?.split(' ')[0].toLowerCase().endsWith('y')) ? 'girl' : 'boy'}?username=` + student.name + '_' + student.age)}`}
+                                                            alt={student.name}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    </div>
                                                     <span className="font-semibold text-slate-900 dark:text-slate-100">{student.name}</span>
                                                     {student.condition && (
                                                         <span className="bg-indigo-50 dark:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300 text-[10px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded-md truncate max-w-[100px]">

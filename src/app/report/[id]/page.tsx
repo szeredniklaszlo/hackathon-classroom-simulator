@@ -143,8 +143,8 @@ export default function VirtualDiary() {
             }, 1500);
         } catch (error: any) {
             console.error("Save error:", error);
-            toast.error("Hiba történt a mentés során", {
-                description: error.message || "Ismeretlen hiba.",
+            toast.error("An error occurred during save", {
+                description: error.message || "Unknown error.",
             });
         }
     };
@@ -295,7 +295,7 @@ export default function VirtualDiary() {
 
     const generateAIFeedback = async (transcriptData: TranscriptEntry[]) => {
         setIsGeneratingFeedback(true);
-        const toastId = toast.loading("🤖 Szimuláció elemzése és AI Coach értékelés készítése...");
+        const toastId = toast.loading("🤖 Analyzing simulation and creating AI Coach evaluation...");
         try {
             const res = await fetch('/api/feedback', {
                 method: 'POST',
@@ -308,14 +308,14 @@ export default function VirtualDiary() {
             const data = await res.json();
             if (data.feedback) {
                 setAiFeedback(data.feedback);
-                toast.success("AI Coach elkészült az elemzéssel!", { id: toastId });
+                toast.success("AI Coach finished the analysis!", { id: toastId });
             } else {
                 throw new Error("Invalid response format");
             }
 
         } catch (error) {
             console.error(error);
-            toast.error("Hiba az AI értékelés generálása közben.", { id: toastId });
+            toast.error("Error during AI evaluation generation.", { id: toastId });
         } finally {
             setIsGeneratingFeedback(false);
         }
@@ -420,14 +420,14 @@ export default function VirtualDiary() {
 
                     {/* Header Info */}
                     <div className="border-b border-slate-100 dark:border-slate-800 pb-6 mb-8 text-center sm:text-left">
-                        <h2 className="text-3xl font-extrabold text-slate-900 dark:text-slate-100 mb-2">{currentClass?.subject || 'Beszámoló'}</h2>
+                        <h2 className="text-3xl font-extrabold text-slate-900 dark:text-slate-100 mb-2">{currentClass?.subject || 'Report'}</h2>
                         <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 text-sm font-medium text-slate-500 dark:text-slate-400">
-                            <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full"><span className="text-lg">{currentClass?.emoji || '📚'}</span> {currentClass?.name || 'Ismeretlen Osztály'}</span>
+                            <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full"><BookOpen size={16} className="text-sky-500" /> {currentClass?.name || 'Ismeretlen Osztály'}</span>
                             <span className="bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">{currentClass?.students?.length || 0} Students</span>
                             {sessionStats?.durationSeconds && (
                                 <span className="flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1 rounded-full text-indigo-700 dark:text-indigo-400 font-bold border border-indigo-100 dark:border-indigo-800/50">
                                     <Clock size={16} />
-                                    {Math.floor(sessionStats.durationSeconds / 60)} perc {sessionStats.durationSeconds % 60} mp
+                                    {Math.floor(sessionStats.durationSeconds / 60)} min {sessionStats.durationSeconds % 60} sec
                                 </span>
                             )}
                             <span className="bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">{new Date().toLocaleDateString()}</span>
@@ -474,7 +474,7 @@ export default function VirtualDiary() {
                             <div className="lg:col-span-2 bg-slate-50 dark:bg-slate-800/30 border border-slate-200 dark:border-slate-700/50 p-6 rounded-2xl flex flex-col">
                                 <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
                                     <Activity size={18} className="text-indigo-500" />
-                                    Osztály elégedettség alakulása
+                                    Class satisfaction timeline
                                 </h3>
                                 <div className="flex-1 w-full min-h-[180px]">
                                     {sessionStats.timeline && sessionStats.timeline.length > 0 ? (
@@ -498,7 +498,7 @@ export default function VirtualDiary() {
                                         </ResponsiveContainer>
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center text-slate-400 dark:text-slate-500 text-sm">
-                                            Nincs elegendő adat a grafikonhoz
+                                            Not enough data for the graph
                                         </div>
                                     )}
                                 </div>

@@ -28,7 +28,6 @@ export default function StudentsPage() {
                     name: dbStudent.name,
                     age: dbStudent.age,
                     type: dbStudent.type,
-                    emoji: dbStudent.emoji,
                     condition: dbStudent.condition,
                     personality: dbStudent.personality,
                     avatar_url: dbStudent.avatar_url,
@@ -55,7 +54,6 @@ export default function StudentsPage() {
 
     // Form State
     const [newName, setNewName] = useState('');
-    const [newEmoji, setNewEmoji] = useState('🧐');
     const [newAge, setNewAge] = useState<number | ''>('');
     const [newConditions, setNewConditions] = useState<string[]>([]);
     const [customCondition, setCustomCondition] = useState('');
@@ -73,7 +71,6 @@ export default function StudentsPage() {
     const openCreateDrawer = () => {
         setEditingStudent(null);
         setNewName('');
-        setNewEmoji('🧠');
         setNewAge('');
         setNewConditions([]);
         setCustomCondition('');
@@ -89,7 +86,6 @@ export default function StudentsPage() {
     const handleEditClick = (student: Student) => {
         setEditingStudent(student);
         setNewName(student.name);
-        setNewEmoji(student.emoji || '🧠');
         setNewAge(student.age);
 
         // Handle condition parsing (assuming comma separated string in DB)
@@ -188,7 +184,6 @@ export default function StudentsPage() {
                     id: editingStudent?.id, // Only for PATCH
                     name: newName,
                     age: newAge,
-                    emoji: newEmoji,
                     personality: newPersonality,
                     activity_level: activityLevel,
                     conflict_level: conflictLevel,
@@ -214,7 +209,6 @@ export default function StudentsPage() {
                 condition: condition,
                 personality: newPersonality,
                 created_at: dbStudent.created_at || new Date().toISOString(),
-                emoji: newEmoji,
                 avatar_url: dbStudent.avatar_url,
                 moodScore: editingStudent ? editingStudent.moodScore : 50 + Math.floor(Math.random() * 30),
                 raisedHand: editingStudent ? editingStudent.raisedHand : false,
@@ -263,7 +257,6 @@ export default function StudentsPage() {
                     condition: generated.condition,
                     personality: generated.personality,
                     created_at: generated.created_at || new Date().toISOString(),
-                    emoji: generated.emoji,
                     avatar_url: generated.avatar_url,
                     moodScore: 50 + Math.floor(Math.random() * 30),
                     raisedHand: false,
@@ -434,9 +427,8 @@ export default function StudentsPage() {
                 <div className="flex-1 overflow-y-auto p-6">
                     <form id="generate-student-form" onSubmit={handleGenerateStudent} noValidate className="space-y-6">
 
-                        {/* Basic Info */}
-                        <div className="grid grid-cols-4 gap-4">
-                            <div className="col-span-3">
+                        <div className="grid grid-cols-1 gap-4">
+                            <div>
                                 <label className="mb-1.5 block text-sm font-semibold text-slate-900 dark:text-slate-200">Student Name *</label>
                                 <input
                                     type="text"
@@ -453,15 +445,6 @@ export default function StudentsPage() {
                                         {nameError}
                                     </p>
                                 )}
-                            </div>
-                            <div className="col-span-1">
-                                <label className="mb-1.5 block text-sm font-semibold text-slate-900 dark:text-slate-200">Emoji *</label>
-                                <input
-                                    type="text"
-                                    value={newEmoji}
-                                    onChange={(e) => setNewEmoji(e.target.value)}
-                                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent dark:bg-slate-900/50 dark:text-slate-100 px-4 py-2.5 text-center text-xl outline-none transition-all focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 dark:focus:ring-indigo-500/20"
-                                />
                             </div>
                         </div>
 
