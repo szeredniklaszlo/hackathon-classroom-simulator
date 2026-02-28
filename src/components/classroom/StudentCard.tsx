@@ -24,76 +24,11 @@ export const guessGender = (fullName: string): 'boy' | 'girl' => {
     return 'boy';
 };
 
-export default function StudentCard({ student, idx }: { student: Student, idx: number }) {
+export default function StudentCard({ student, idx, isSpeaking = false }: { student: Student, idx: number, isSpeaking?: boolean }) {
+    // The parent page.tsx now handles audio playback and passes down the isSpeaking state
+
     // Derived properties
     const gender = guessGender(student.name);
-
-    // Local state for displaying the message temporarily
-    const [isSpeaking, setIsSpeaking] = useState(false);
-    const audioRef = useRef<HTMLAudioElement | null>(null);
-
-    useEffect(() => {
-        // Cleanup function for audio
-        return () => {
-            if (audioRef.current) {
-                audioRef.current.pause();
-                audioRef.current.src = '';
-            }
-        };
-    }, []);
-
-    useEffect(() => {
-        if (student.currentMessage && (student.currentAction === 'ANSWER_DIRECTLY' || student.currentAction === 'INTERRUPT' || student.currentAction === 'WHISPER')) {
-            const playTTS = async () => {
-                try {
-                    setIsSpeaking(true);
-                    const response = await fetch('/api/tts', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            text: student.currentMessage,
-                            studentType: student.type
-                        }),
-                    });
-
-                    if (!response.ok) {
-                        throw new Error('TTS generation failed');
-                    }
-
-                    const blob = await response.blob();
-                    const url = URL.createObjectURL(blob);
-
-                    if (audioRef.current) {
-                        audioRef.current.pause();
-                    }
-
-                    const audio = new Audio(url);
-                    audioRef.current = audio;
-
-                    // Add slight volume reduction for whispers
-                    if (student.currentAction === 'WHISPER') {
-                        audio.volume = 0.4;
-                    }
-
-                    audio.onended = () => {
-                        setIsSpeaking(false);
-                        URL.revokeObjectURL(url);
-                    };
-
-                    await audio.play();
-                } catch (error) {
-                    console.error("Failed to play student audio:", error);
-                    setIsSpeaking(false);
-                    // Fallback to toast if audio fails
-                    toast.error(`Failed to play audio for ${student.name}.`);
-                }
-            };
-
-            playTTS();
-        }
-    }, [student.currentMessage, student.currentAction, student.type, student.name]);
 
     return (
         <motion.div

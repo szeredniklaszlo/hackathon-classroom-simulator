@@ -83,7 +83,56 @@ export default function VirtualClassroom() {
     const [seconds, setSeconds] = useState(0);
     const [liveTranscript, setLiveTranscript] = useState<TranscriptEntry[]>([]);
 
-    // Azure STT Hook
+    // Audio streaming/TTS refs
+    const audioQueues = useRef<Record<string, string[]>>({});
+    const isPlayingMap = useRef<Record<string, boolean>>({});
+    const [speakingStudents, setSpeakingStudents] = useState<Record<string, boolean>>({});
+
+    const playAudio = async (studentId: string, studentType: string, text: string) => {
+        if (!audioQueues.current[studentId]) audioQueues.current[studentId] = [];
+        audioQueues.current[studentId].push(text);
+        processAudioQueue(studentId, studentType);
+    };
+
+    const processAudioQueue = async (studentId: string, studentType: string) => {
+        if (isPlayingMap.current[studentId]) return;
+
+        if (!audioQueues.current[studentId] || audioQueues.current[studentId].length === 0) {
+            setSpeakingStudents(prev => ({ ...prev, [studentId]: false }));
+            return;
+        }
+
+        isPlayingMap.current[studentId] = true;
+        setSpeakingStudents(prev => ({ ...prev, [studentId]: true }));
+
+        const text = audioQueues.current[studentId].shift()!;
+
+        try {
+            const response = await fetch('/api/tts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text, studentType }),
+            });
+
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const audio = new Audio(url);
+
+                await new Promise((resolve) => {
+                    audio.onended = resolve;
+                    audio.onerror = resolve; // proceed on error too
+                    audio.play().catch(resolve);
+                });
+                URL.revokeObjectURL(url);
+            }
+        } catch (e) {
+            console.error("TTS play error", e);
+        }
+
+        isPlayingMap.current[studentId] = false;
+        processAudioQueue(studentId, studentType); // play next in queue
+    };
     const { isListening, startListening, stopListening, fullTranscript, stableBuffer, setStableBuffer } = useAzureSTT({ language: 'en-US' });
 
     // Timer simulation
@@ -138,70 +187,123 @@ export default function VirtualClassroom() {
                     })
                 });
 
-                if (response.ok) {
+                if (!response.ok) throw new Error("Orchestrator request failed");
+
+                // Check if JSON fallback (i.e. not processed)
+                const contentType = response.headers.get('content-type') || '';
+                if (contentType.includes('application/json')) {
                     const data = await response.json();
-                    if (data.isProcessed) {
+                    if (!data.isProcessed) {
                         setStableBuffer(data.remainingBuffer);
-                        lastBufferRef.current = '';
+                    }
+                    setIsProcessing(false);
+                    return;
+                }
 
-                        const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                        const newEntries: TranscriptEntry[] = [];
+                // Handle Streaming NDJSON
+                const reader = response.body?.getReader();
+                if (!reader) {
+                    setIsProcessing(false);
+                    return;
+                }
 
-                        if (data.extractedContext) {
-                            newEntries.push({
-                                id: `t-${Date.now()}`,
-                                speaker: 'Teacher',
-                                text: data.extractedContext,
-                                timestamp,
-                            });
-                        }
+                const decoder = new TextDecoder();
+                let buffer = '';
+                const streamedText: Record<string, string> = {};
+                const ttsBuffer: Record<string, string> = {};
 
-                        // Update students based on orchestrator response
-                        if (data.responses && data.responses.length > 0) {
-                            setStudents(prev => {
-                                const updated = [...prev];
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
 
-                                // Először mindenkinek töröljük az előző cselekvését (hogy eltűnjenek a régi szövegbuborékok)
-                                // De a hangulatuk/engagement marad
-                                updated.forEach(s => {
-                                    s.currentAction = 'LISTEN';
-                                    s.currentMessage = null;
-                                    s.raisedHand = false;
-                                });
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
 
-                                data.responses.forEach((res: any) => {
-                                    const idx = updated.findIndex(s => s.id === res.studentId);
+                    for (const line of lines) {
+                        if (!line.trim()) continue;
+                        try {
+                            const event = JSON.parse(line);
+
+                            if (event.type === 'preProc') {
+                                setStableBuffer(event.remainingBuffer);
+                                lastBufferRef.current = '';
+                                if (event.extractedContext) {
+                                    setLiveTranscript(prev => [...prev, {
+                                        id: `t-${Date.now()}`,
+                                        speaker: 'Teacher',
+                                        text: event.extractedContext,
+                                        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                    }]);
+                                }
+                                // Reset statuses
+                                setStudents(prev => prev.map(s => ({ ...s, currentAction: 'LISTEN', currentMessage: null, raisedHand: false })));
+
+                            } else if (event.type === 'chunk') {
+                                const sid = event.studentId;
+                                const textToAdd = event.text;
+
+                                ttsBuffer[sid] = (ttsBuffer[sid] || '') + textToAdd;
+                                streamedText[sid] = (streamedText[sid] || '') + textToAdd;
+
+                                const sentenceMatch = ttsBuffer[sid].match(/(.*?[.?!])(\s+|$)/);
+                                if (sentenceMatch && sentenceMatch[1].length > 15) {
+                                    const sentence = sentenceMatch[1];
+                                    ttsBuffer[sid] = ttsBuffer[sid].substring(sentenceMatch[0].length);
+                                    const stu = updatedStudentsForOrchestrator.find(s => s.id === sid);
+                                    if (stu && sentence.trim()) {
+                                        playAudio(sid, stu.type, sentence.trim());
+                                    }
+                                }
+
+                                // Render text as it streams
+                                if (textToAdd) {
+                                    setStudents(prev => prev.map(s => s.id === sid ? { ...s, currentMessage: streamedText[sid] } : s));
+                                }
+
+                            } else if (event.type === 'done') {
+                                const sid = event.studentId;
+                                const textPart = event.fullContent;
+                                const meta = event.meta || {};
+
+                                // Play remainder
+                                if (ttsBuffer[sid] && ttsBuffer[sid].trim().length > 0) {
+                                    const stu = updatedStudentsForOrchestrator.find(s => s.id === sid);
+                                    if (stu) playAudio(sid, stu.type, ttsBuffer[sid].trim());
+                                }
+
+                                setStudents(prev => {
+                                    const updated = [...prev];
+                                    const idx = updated.findIndex(s => s.id === sid);
                                     if (idx !== -1) {
                                         updated[idx] = {
                                             ...updated[idx],
-                                            moodScore: res.newEngagement,
-                                            currentAction: res.action,
-                                            currentMessage: res.message,
-                                            raisedHand: res.action === 'RAISE_HAND',
+                                            moodScore: meta.moodScore ?? updated[idx].moodScore,
+                                            currentAction: meta.action || 'LISTEN',
+                                            currentMessage: textPart || null,
+                                            raisedHand: meta.action === 'RAISE_HAND',
                                         };
-                                        if (res.action !== 'LISTEN' && res.action !== 'RAISE_HAND' && res.message) {
-                                            newEntries.push({
-                                                id: `s-${res.studentId}-${Date.now()}`,
-                                                speaker: updated[idx].name,
-                                                text: res.message,
-                                                timestamp,
-                                                // rudimentary emotion inference from score
-                                                emotion: res.newEngagement > 70 ? 'happy' : res.newEngagement < 40 ? 'confused' : 'neutral'
-                                            });
-                                            toast(`${updated[idx].name} says:`, { description: res.message, duration: 4000 });
+
+                                        if (meta.action !== 'LISTEN' && meta.action !== 'RAISE_HAND' && textPart) {
+                                            setLiveTranscript(lt => [
+                                                ...lt,
+                                                {
+                                                    id: `s-${sid}-${Date.now()}`,
+                                                    speaker: updated[idx].name,
+                                                    text: textPart,
+                                                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                                                    emotion: meta.emotion || 'neutral'
+                                                }
+                                            ]);
+                                            toast(`${updated[idx].name} says:`, { description: textPart, duration: 4000 });
                                         }
                                     }
+                                    return updated;
                                 });
-                                return updated;
-                            });
+                            }
+                        } catch (err) {
+                            console.error("NDJSON Stream Parse error", err, line);
                         }
-
-                        if (newEntries.length > 0) {
-                            setLiveTranscript(prev => [...prev, ...newEntries]);
-                        }
-
-                    } else if (data.remainingBuffer !== undefined) {
-                        // Not enough context yet. Buffer stays the same or grows pending next STT update.
                     }
                 }
             } catch (err) {
@@ -342,7 +444,7 @@ export default function VirtualClassroom() {
                         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 auto-rows-fr h-full place-items-center">
                             <AnimatePresence>
                                 {students.map((student, idx) => (
-                                    <StudentCard key={student.id} student={student} idx={idx} />
+                                    <StudentCard key={student.id} student={student} idx={idx} isSpeaking={speakingStudents[student.id]} />
                                 ))}
                             </AnimatePresence>
                         </div>

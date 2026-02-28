@@ -51,38 +51,42 @@ Kimenet csak valid JSON: { "isProcessed": boolean, "extractedContext": string | 
         // Token spórolás: Az utolsó pár üzenetet rakjuk a promptba
         const recentHistory = fullTranscript.slice(-8).map(entry => `[${entry.speaker}]: ${entry.text}`).join('\n');
 
-        // --- 2. PROCESSOR (A Multi-Agent logika) ---
+        // --- 2. PROCESSOR (A Multi-Agent logika, most már Streaminggel!) ---
+        console.log(`[Orchestrator] PÁRHUZAMOSAN streameljük ${students.length} tanuló válaszát...`);
 
-        console.log(`[Orchestrator] PÁRHUZAMOSAN (Parallel) elindítjuk ${students.length} tanuló AI generálását...`);
+        const encoder = new TextEncoder();
+        const stream = new ReadableStream({
+            async start(controller) {
+                // Legelőször leküldjük a PreProcessor eredményét
+                controller.enqueue(encoder.encode(JSON.stringify({
+                    type: 'preProc',
+                    isProcessed: true,
+                    extractedContext: preProc.extractedContext,
+                    remainingBuffer: preProc.remainingBuffer
+                }) + '\n'));
 
-        // Tömböt hozunk létre a Promise-okból, melyek egyszerre fognak elindulni
-        const studentPromises = students.map((student: any) => {
-            return (async () => {
-                try {
-                    // Ellenőrizzük, hogy a tanár közvetlenül ezt a diákot szólította-e meg
-                    const isAddressed = isDirectlyAddressed(preProc.extractedContext!, student.name);
+                const studentPromises = students.map(async (student: any) => {
+                    try {
+                        const isAddressed = isDirectlyAddressed(preProc.extractedContext!, student.name);
+                        const basePersona = student.prompt
+                            ? `YOUR DETAILED SYSTEM PERSONA:\n${student.prompt}\n\nCURRENT STATE:\nCurrent Engagement/Mood: ${student.moodScore}/100`
+                            : `Name: ${student.name}\nAge: ${student.age}\nPersonality: ${student.personality || "Average student"}\nCurrent Engagement: ${student.moodScore}/100\nRole: ${student.type} (e.g. nerd, troublemaker, shy)`;
 
-                    const basePersona = student.prompt
-                        ? `YOUR DETAILED SYSTEM PERSONA:\n${student.prompt}\n\nCURRENT STATE:\nCurrent Engagement/Mood: ${student.moodScore}/100`
-                        : `Name: ${student.name}\nAge: ${student.age}\nPersonality: ${student.personality || "Average student"}\nCurrent Engagement: ${student.moodScore}/100\nRole: ${student.type} (e.g. nerd, troublemaker, shy)`;
-
-                    const result = await client.chat.completions.create({
-                        model: process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "",
-                        response_format: { type: "json_object" },
-                        messages: [
-                            {
-                                role: "system",
-                                content: `You are simulating a student in a classroom.
-                                
+                        // --- CALL 1: GENERATE SPOKEN TEXT ONLY (Streaming) ---
+                        const textStreamResponse = await client.chat.completions.create({
+                            model: process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "",
+                            stream: true,
+                            messages: [
+                                {
+                                    role: "system",
+                                    content: `You are simulating a student in a classroom.
 ${basePersona}
 
 YOUR BEHAVIORAL PROTOCOL (CRITICAL RULES):
-1. **DEFAULT STATE:** You should usually stay SILENT and LISTEN.
-2. **DIRECT ADDRESS:** If the teacher explicitly said your name ("${student.name}"), you MUST respond (action: "ANSWER_DIRECTLY").
-3. **GENERAL QUESTIONS:** If the teacher asks a general question to the class, DO NOT shout out. Instead, choose "RAISE_HAND" if you know the answer, or "LISTEN" if you don't.
-4. **DISRUPTION:** Only if your personality (as described above) is distracted or a troublemaker AND your engagement is low, you might "WHISPER" to a neighbor or "INTERRUPT". Let your specific conditions dictate if you interrupt or whisper.
-5. **SHY/ANXIOUS:** Even if you know the answer, if you are shy or anxious according to your persona, you might just "LISTEN" or hesitantly "RAISE_HAND".
-6. **BE AN ACTUAL KID:** You are a student in a classroom, not a robot. You should act like a real kid, not a robot, so your answers can allow mistakes and "I don't know"-ish responses.
+1. DEFAULT STATE is SILENT. If no one asked you, or you don't care, you don't speak.
+2. If the teacher explicitly said your name ("${student.name}"), you MUST respond.
+3. If addressing the class generally, only speak if your personality dictates it (e.g. over-eager, or answering a direct question).
+4. Act like a real kid. Your answers can contain mistakes or "I don't know"-ish responses.
 
 INPUT CONTEXT:
 
@@ -95,59 +99,93 @@ Teacher said: "${preProc.extractedContext}"
 Directly addressed to you: ${isAddressed}
 ----------------------------------------------
 
-Analyze the situation and return JSON:
-{
-  "studentId": "${student.id}",
-  "internalThought": "string (Why did you choose this action?)",
-  "action": "LISTEN" | "RAISE_HAND" | "ANSWER_DIRECTLY" | "WHISPER" | "INTERRUPT",
-  "message": "string" (The content of speech/whisper. NULL if action is LISTEN or RAISE_HAND),
-  "newEngagement": number (0-100),
-  "emotion": "curious" | "bored" | "anxious" | "excited"
-}`
+TASK:
+Output EXACTLY AND ONLY what you say out loud. Do not include quotes, actions, or metadata. If you stay silent, return a completely empty response.`
+                                }
+                            ]
+                        });
+
+                        let spokenText = "";
+                        for await (const chunk of textStreamResponse) {
+                            const text = chunk.choices[0]?.delta?.content || "";
+                            if (text) {
+                                spokenText += text;
+                                controller.enqueue(encoder.encode(JSON.stringify({
+                                    type: 'chunk',
+                                    studentId: student.id,
+                                    text
+                                }) + '\n'));
                             }
-                        ]
-                    });
+                        }
 
-                    const content = result.choices[0]?.message?.content;
-                    return content ? JSON.parse(content) : null;
-                } catch (err) {
-                    console.error(`Error with student ${student.name}`, err);
-                    return null;
-                }
-            })();
+                        // --- CALL 2: GENERATE METADATA IN JSON (Non-streaming) ---
+                        const metaResponse = await client.chat.completions.create({
+                            model: process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "",
+                            response_format: { type: "json_object" },
+                            messages: [
+                                {
+                                    role: "system",
+                                    content: `You are analyzing the internal state of a student simulation.
+${basePersona}
+
+The teacher just said: "${preProc.extractedContext}"
+The student decided to say this out loud in response: "${spokenText}"
+(If the spoken text is empty, it means the student stayed silent).
+
+Analyze the situation and return a valid JSON object:
+{
+  "action": "LISTEN" | "RAISE_HAND" | "ANSWER_DIRECTLY" | "WHISPER" | "INTERRUPT",
+  "moodScore": number (1-100),
+  "emotion": "bored" | "anxious" | "excited" | "happy" | "confused" | "neutral",
+  "internalThought": "string (Why did the student do this?)"
+}
+
+Guidelines for "action":
+- If the spoken text is empty and they are just listening, action MUST be "LISTEN".
+- If the spoken text is empty but they want to answer silently, action MUST be "RAISE_HAND".
+- If the spoken text is NOT empty and they were addressed, action MUST be "ANSWER_DIRECTLY".
+- If the spoken text is NOT empty and they were NOT addressed, action MUST be "INTERRUPT" or "WHISPER".`
+                                }
+                            ]
+                        });
+
+                        const metaPart = metaResponse.choices[0]?.message?.content || "{}";
+                        let metaObj = {};
+                        try {
+                            metaObj = JSON.parse(metaPart);
+                        } catch (e) {
+                            metaObj = { action: spokenText ? "ANSWER_DIRECTLY" : "LISTEN", moodScore: student.moodScore, emotion: "neutral" };
+                        }
+
+                        // Send done event with metadata merged into the payload
+                        controller.enqueue(encoder.encode(JSON.stringify({
+                            type: 'done',
+                            studentId: student.id,
+                            fullContent: spokenText,
+                            meta: metaObj
+                        }) + '\n'));
+
+                    } catch (err) {
+                        console.error(`Error with student ${student.name}`, err);
+                        controller.enqueue(encoder.encode(JSON.stringify({
+                            type: 'done',
+                            studentId: student.id,
+                            fullContent: "",
+                            meta: { action: "LISTEN", moodScore: student.moodScore, emotion: "neutral", internalThought: "Error occurred" }
+                        }) + '\n'));
+                    }
+                });
+
+                await Promise.all(studentPromises);
+                controller.close();
+            }
         });
 
-        // Promise.all segítségével PÁRHUZAMOSAN bevárjuk az összes tanuló válaszát
-        const rawResponses = (await Promise.all(studentPromises)).filter(Boolean);
-        console.log(`[Orchestrator] Minden tanuló válasza megérkezett párhuzamosan.`);
-
-        // --- 3. THE CONDUCTOR (Utófeldolgozás / Konfliktuskezelés) ---
-        // Itt döntjük el, ki beszélhet valójában, hogy ne legyen káosz.
-
-        const finalResponses = rawResponses.filter((r: any) => {
-            // Mindig engedjük át, ha csendben van vagy csak kezet tesz fel (ez UI állapot)
-            if (r.action === 'LISTEN' || r.action === 'RAISE_HAND') return true;
-
-            // Ha közvetlenül kérdezték, mindig beszélhet
-            if (r.action === 'ANSWER_DIRECTLY') return true;
-
-            // Ha sutyorgás vagy bekiabálás (INTERRUPT), engedjük át, 
-            // DE itt lehetne random filtert tenni (pl. csak max 1 ember kiabálhat be egyszerre)
-            if (r.action === 'INTERRUPT' || r.action === 'WHISPER') return true;
-
-            return false;
-        });
-
-        // UI egyszerűsítés: A frontendnek lehet, hogy csak egy "text" kell, 
-        // de érdemes visszaküldeni az action típusát, hogy pl. megjelenjen egy kéz ikon ✋
-
-        console.log(`[Processor] Processed ${finalResponses.length} valid reactions.`);
-
-        return NextResponse.json({
-            isProcessed: true,
-            extractedContext: preProc.extractedContext,
-            remainingBuffer: preProc.remainingBuffer,
-            responses: finalResponses
+        return new Response(stream, {
+            headers: {
+                'Content-Type': 'application/x-ndjson',
+                'Cache-Control': 'no-cache'
+            }
         });
 
     } catch (error) {
