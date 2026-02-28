@@ -31,6 +31,7 @@ export default function StudentsPage() {
                     emoji: dbStudent.emoji,
                     condition: dbStudent.condition,
                     personality: dbStudent.personality,
+                    avatar_url: dbStudent.avatar_url,
                     created_at: dbStudent.created_at,
                     moodScore: 50 + Math.floor(Math.random() * 30), // generic random starting mood
                     raisedHand: false,
@@ -214,6 +215,7 @@ export default function StudentsPage() {
                 personality: newPersonality,
                 created_at: dbStudent.created_at || new Date().toISOString(),
                 emoji: newEmoji,
+                avatar_url: dbStudent.avatar_url,
                 moodScore: editingStudent ? editingStudent.moodScore : 50 + Math.floor(Math.random() * 30),
                 raisedHand: editingStudent ? editingStudent.raisedHand : false,
                 learningStatus: editingStudent ? editingStudent.learningStatus : 'Awaiting first lesson...',
@@ -262,6 +264,7 @@ export default function StudentsPage() {
                     personality: generated.personality,
                     created_at: generated.created_at || new Date().toISOString(),
                     emoji: generated.emoji,
+                    avatar_url: generated.avatar_url,
                     moodScore: 50 + Math.floor(Math.random() * 30),
                     raisedHand: false,
                     learningStatus: 'Awaiting first lesson...',
@@ -362,8 +365,12 @@ export default function StudentsPage() {
                             className="group flex flex-col items-start text-left w-full overflow-hidden rounded-2xl bg-white dark:bg-slate-800/80 p-5 shadow-sm ring-1 ring-slate-100 dark:ring-slate-700/50 transition-all hover:-translate-y-1 hover:shadow-md hover:ring-indigo-500/20 dark:hover:ring-indigo-500/30"
                         >
                             <div className="flex w-full items-start justify-between relative">
-                                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 dark:bg-slate-700/50 text-2xl shadow-sm">
-                                    {student.emoji}
+                                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 dark:bg-slate-700/50 text-2xl shadow-sm overflow-hidden">
+                                    <img
+                                        src={student.avatar_url || `https://wsrv.nl/?url=${encodeURIComponent(`avatar.iran.liara.run/public/${(student.name?.split(' ')[0].toLowerCase().endsWith('a') || student.name?.split(' ')[0].toLowerCase().endsWith('e') || student.name?.split(' ')[0].toLowerCase().endsWith('i') || student.name?.split(' ')[0].toLowerCase().endsWith('y')) ? 'girl' : 'boy'}?username=` + student.name + '_' + student.age)}`}
+                                        alt={student.name}
+                                        className="w-full h-full object-cover"
+                                    />
                                 </div>
                                 {student.condition && (
                                     <div className="absolute top-0 right-0 bg-indigo-50 dark:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300 text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full z-10 shadow-sm truncate max-w-[120px]">

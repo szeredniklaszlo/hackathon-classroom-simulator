@@ -2,6 +2,23 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { AzureOpenAI } from 'openai';
 
+// Simple heuristic to guess gender from name (Hungarian/English focus)
+const guessGender = (fullName: string): 'boy' | 'girl' => {
+    if (!fullName) return 'boy';
+    const firstName = fullName.split(' ')[0].toLowerCase();
+    // Common girl name endings
+    if (firstName.endsWith('a') || firstName.endsWith('e') || firstName.endsWith('i') || firstName.endsWith('y')) {
+        return 'girl';
+    }
+    return 'boy';
+};
+
+const getAvatarUrl = (name: string, age: number) => {
+    const gender = guessGender(name);
+    // Use the user's specific requested format: avatar.iran.liara.run proxied through wsrv.nl
+    return `https://wsrv.nl/?url=${encodeURIComponent(`avatar.iran.liara.run/public/${gender}?username=` + name + '_' + age)}`;
+};
+
 // Initialize Supabase.  Using env variables in a real app, 
 // but for the hackathon/simplicity we use the project URL and anon key here.
 // In a production app, these should be in .env.local:
@@ -92,7 +109,8 @@ Please generate the detailed persona system prompt in English.`
                     attention_span,
                     type,
                     condition: condition || null,
-                    prompt: generatedPrompt || null
+                    prompt: generatedPrompt || null,
+                    avatar_url: getAvatarUrl(name, age)
                 }
             ])
             .select()
@@ -134,13 +152,14 @@ export async function PATCH(request: Request) {
         // Determine if we should regenerate the AI prompt
         // We regenerate if name, age, type, condition, or personality-defining levels change
         const shouldRegenerate =
-            name !== currentStudent.name ||
-            age !== currentStudent.age ||
-            personality !== currentStudent.personality ||
-            activity_level !== currentStudent.activity_level ||
-            conflict_level !== currentStudent.conflict_level ||
             attention_span !== currentStudent.attention_span ||
             condition !== currentStudent.condition;
+
+        // Regenerate avatar if name or age changes
+        let avatar_url = currentStudent.avatar_url;
+        if (name !== currentStudent.name || age !== currentStudent.age || !avatar_url) {
+            avatar_url = getAvatarUrl(name, age);
+        }
 
         let updatedPrompt = currentStudent.prompt;
 
@@ -203,7 +222,8 @@ Please generate the detailed persona system prompt in English.`
                 attention_span,
                 type,
                 condition: condition || null,
-                prompt: updatedPrompt
+                prompt: updatedPrompt,
+                avatar_url: avatar_url
             })
             .eq('id', id)
             .select()
@@ -229,7 +249,7 @@ export async function GET(request: Request) {
 
         let query = supabase
             .from('student_personas')
-            .select('id, name, age, emoji, type, prompt, condition, personality, created_at')
+            .select('id, name, age, emoji, type, prompt, condition, personality, avatar_url, created_at')
             .order('created_at', { ascending: false });
 
         if (searchQuery) {
