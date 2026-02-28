@@ -47,8 +47,8 @@ export async function updateSession(request: NextRequest) {
     ];
 
     const isPublic = publicPaths.some(p =>
-        request.nextUrl.pathname === p || request.nextUrl.pathname.startsWith(p + '/')
-    );
+        request.nextUrl.pathname === p || request.nextUrl.pathname.startsWith(`${p}/`)
+    ) || request.nextUrl.pathname.startsWith('/.swa/');
 
     if (!user && !isPublic) {
         const url = request.nextUrl.clone()
