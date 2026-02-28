@@ -571,6 +571,36 @@ export default function VirtualClassroom() {
                             Live: {formatTime(seconds)}
                         </div>
                     )}
+
+                    {/* Azure badge — hover to expand */}
+                    <div className="relative group">
+                        <div className="flex items-center gap-1.5 bg-[#0078D4]/10 hover:bg-[#0078D4]/15 border border-[#0078D4]/30 text-[#0078D4] dark:text-sky-400 px-3 py-1.5 rounded-full text-xs font-bold cursor-default transition-colors select-none">
+                            <svg width="14" height="14" viewBox="0 0 48 48" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M28.17 4L16 22.39l12.38 14.56H48zM0 36.55l10.21 7.45h22.59l-5.35-7.45z" />
+                            </svg>
+                            Powered by Azure
+                        </div>
+                        {/* Popover */}
+                        <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-slate-950/50 p-4 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all duration-200 z-50 origin-top-right scale-95 group-hover:scale-100">
+                            <p className="text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Active Azure Services</p>
+                            <div className="space-y-2.5">
+                                {[
+                                    { icon: '🧠', name: 'Azure OpenAI', desc: 'GPT-4o · Student AI & Coach' },
+                                    { icon: '🎙️', name: 'Azure Speech-to-Text', desc: 'Teacher voice recognition' },
+                                    { icon: '🔊', name: 'Azure Text-to-Speech', desc: 'Student voice synthesis' },
+                                ].map(s => (
+                                    <div key={s.name} className="flex items-start gap-3">
+                                        <span className="text-lg leading-none mt-0.5">{s.icon}</span>
+                                        <div>
+                                            <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{s.name}</p>
+                                            <p className="text-[10px] text-slate-400 dark:text-slate-500">{s.desc}</p>
+                                        </div>
+                                        <span className="ml-auto w-2 h-2 rounded-full bg-green-400 mt-1.5 shrink-0" title="Active" />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </header>
 

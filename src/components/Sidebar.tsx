@@ -104,6 +104,14 @@ export default function Sidebar() {
                         <ThemeToggle />
                     </div>
 
+                    {/* Azure Badge */}
+                    <div className="mt-4 flex items-center justify-center gap-2 rounded-xl border border-[#0078D4]/20 bg-[#0078D4]/5 px-3 py-2">
+                        <svg width="14" height="14" viewBox="0 0 48 48" fill="#0078D4" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M28.17 4L16 22.39l12.38 14.56H48zM0 36.55l10.21 7.45h22.59l-5.35-7.45z" />
+                        </svg>
+                        <span className="text-xs font-bold text-[#0078D4] dark:text-sky-400">Powered by Azure</span>
+                    </div>
+
                     {/* Teacher / Guest Profile + Logout */}
                     <div className="mt-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 p-4 border border-slate-100 dark:border-slate-700/50">
                         <div className="flex items-center gap-3 mb-3">
