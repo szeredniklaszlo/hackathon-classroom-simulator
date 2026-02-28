@@ -403,15 +403,28 @@ export default function VirtualDiary() {
 
             <main className="max-w-4xl mx-auto py-8 px-4 sm:px-6">
 
-                {/* Action Guard for Guest Users — only shown when confirmed not logged in */}
+                {/* Guest CTA Banner — prominent, appears right below the nav */}
                 {authChecked && isGuest && (
-                    <div className="mb-6 bg-amber-50 dark:bg-amber-900/15 border border-amber-200 dark:border-amber-800/40 rounded-xl p-4 flex items-start gap-3">
-                        <AlertCircle className="text-amber-500 mt-0.5 shrink-0" size={20} />
-                        <div>
-                            <h4 className="font-semibold text-amber-800 dark:text-amber-300">Guest Mode Active</h4>
-                            <p className="text-sm text-amber-700 dark:text-amber-400 mt-0.5">
-                                Log in to save this report permanently to your profile.
-                            </p>
+                    <div className="mb-6 relative overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-600 to-sky-500 p-[1px] shadow-lg shadow-indigo-500/20">
+                        <div className="rounded-2xl bg-gradient-to-r from-indigo-600/10 to-sky-500/10 dark:from-indigo-900/60 dark:to-sky-900/60 backdrop-blur-sm px-6 py-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                            {/* Icon */}
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-500/20 dark:bg-indigo-400/10 border border-indigo-400/30 text-2xl">
+                                💾
+                            </div>
+                            {/* Text */}
+                            <div className="flex-1">
+                                <h4 className="font-extrabold text-slate-900 dark:text-white text-base">Save your results — create a free account</h4>
+                                <p className="text-sm text-slate-600 dark:text-slate-300 mt-0.5">
+                                    You're viewing as a <span className="font-semibold">guest</span>. Sign up to save this report, track progress over time, and access your full teaching history.
+                                </p>
+                            </div>
+                            {/* CTA Button */}
+                            <Link
+                                href="/login"
+                                className="shrink-0 inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white font-bold px-5 py-2.5 text-sm shadow-md shadow-indigo-500/30 transition-all"
+                            >
+                                Create Free Account →
+                            </Link>
                         </div>
                     </div>
                 )}
