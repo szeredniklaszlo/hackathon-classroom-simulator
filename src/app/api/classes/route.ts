@@ -44,6 +44,32 @@ export async function POST(request: Request) {
     }
 }
 
+export async function DELETE(request: Request) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
+
+        if (!id) {
+            return NextResponse.json({ error: 'Class ID is required' }, { status: 400 });
+        }
+
+        const { error } = await supabase
+            .from('virtual_classes')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            console.error('Supabase Error:', error);
+            return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+
+        return NextResponse.json({ success: true }, { status: 200 });
+    } catch (error: any) {
+        console.error('API Error:', error);
+        return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
+    }
+}
+
 export async function GET() {
     try {
         const { data, error } = await supabase

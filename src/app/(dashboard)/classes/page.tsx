@@ -3,11 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { VirtualClass, Student } from '@/types/shared';
-import { Users, Plus, Minus, X, BookOpen, Clock, Activity, Search, PlayCircle, Loader2, Sparkles } from 'lucide-react';
+import { Users, Plus, Minus, X, BookOpen, Clock, Activity, Search, PlayCircle, Loader2, Sparkles, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ClassesPage() {
-    const { classes, students, addClass, setClasses, setStudents } = useStore();
+    const { classes, students, addClass, removeClass, setClasses, setStudents } = useStore();
     const [isLoading, setIsLoading] = useState(true);
 
     // Fetch classes and students on mount
@@ -172,8 +172,29 @@ export default function ClassesPage() {
 
     const [isGenerating, setIsGenerating] = useState(false);
     const [isAIGenerating, setIsAIGenerating] = useState(false);
-    // 'manual' = manual create in-flight, 'ai' = AI random in-flight, null = idle
     const [pendingClass, setPendingClass] = useState<'manual' | 'ai' | null>(null);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleDeleteClass = async () => {
+        if (!selectedClass) return;
+        setIsDeleting(true);
+        try {
+            const res = await fetch(`/api/classes?id=${selectedClass.id}`, { method: 'DELETE' });
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Failed to delete class');
+            }
+            removeClass(selectedClass.id);
+            toast.success('Class deleted.', { description: `${selectedClass.name} has been removed.` });
+            setShowDeleteConfirm(false);
+            closeDrawer();
+        } catch (err: any) {
+            toast.error('Delete failed', { description: err.message });
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     const handleCreateClass = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -527,6 +548,17 @@ export default function ClassesPage() {
                                     ))}
                                 </div>
                             </div>
+
+                            {/* Delete button */}
+                            <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                                <button
+                                    onClick={() => setShowDeleteConfirm(true)}
+                                    className="w-full flex items-center justify-center gap-2 rounded-xl border border-red-200 dark:border-red-900/50 py-2.5 text-sm font-semibold text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                                >
+                                    <Trash2 size={15} />
+                                    Delete Class
+                                </button>
+                            </div>
                         </div>
                     )}
 
@@ -709,6 +741,43 @@ export default function ClassesPage() {
                     )}
                 </div>
             </div>
+
+            {/* Delete Confirmation Modal */}
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                    <div
+                        className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+                        onClick={() => setShowDeleteConfirm(false)}
+                    />
+                    <div className="relative w-full max-w-sm rounded-2xl bg-white dark:bg-slate-900 p-6 shadow-2xl ring-1 ring-slate-200 dark:ring-slate-700">
+                        <div className="mb-1 flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30">
+                                <Trash2 size={18} className="text-red-500" />
+                            </div>
+                            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">Delete Class</h3>
+                        </div>
+                        <p className="mt-2 mb-6 text-sm text-slate-500 dark:text-slate-400">
+                            Are you sure you want to delete <span className="font-semibold text-slate-800 dark:text-slate-200">{selectedClass?.name}</span>? This action cannot be undone.
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowDeleteConfirm(false)}
+                                className="flex-1 rounded-xl border border-slate-200 dark:border-slate-700 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleDeleteClass}
+                                disabled={isDeleting}
+                                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-red-500 py-2.5 text-sm font-semibold text-white hover:bg-red-600 transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+                            >
+                                {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+                                {isDeleting ? 'Deleting...' : 'Delete'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

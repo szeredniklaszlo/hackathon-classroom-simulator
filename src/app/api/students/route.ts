@@ -241,6 +241,32 @@ Please generate the detailed persona system prompt in English.`
     }
 }
 
+export async function DELETE(request: Request) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
+
+        if (!id) {
+            return NextResponse.json({ error: 'Student ID is required' }, { status: 400 });
+        }
+
+        const { error } = await supabase
+            .from('student_personas')
+            .delete()
+            .eq('id', id);
+
+        if (error) {
+            console.error('Supabase Error:', error);
+            return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+
+        return NextResponse.json({ success: true }, { status: 200 });
+    } catch (error: any) {
+        console.error('API Error:', error);
+        return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
+    }
+}
+
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);
