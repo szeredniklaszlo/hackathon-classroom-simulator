@@ -15,8 +15,8 @@ export function useAzureSTT({ language = 'en-US' }: UseAzureSTTProps = {}) {
         setStableBuffer('');
         setTranscript('');
 
-        const speechKey = process.env.NEXT_PUBLIC_AZURE_SPEECH_KEY;
-        const speechRegion = process.env.NEXT_PUBLIC_AZURE_SPEECH_REGION;
+        const speechKey = process.env.NEXT_PUBLIC_NEXT_PUBLIC_AZURE_SPEECH_KEY;
+        const speechRegion = process.env.NEXT_PUBLIC_NEXT_PUBLIC_AZURE_SPEECH_REGION;
 
         if (!speechKey || !speechRegion) {
             console.error('Azure Speech API kulcs vagy régió hiányzik az .env fájlból!');

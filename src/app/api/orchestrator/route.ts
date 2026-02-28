@@ -15,16 +15,16 @@ export async function POST(req: Request) {
         const { students, teacherTranscriptChunk, fullTranscript = [] } = body;
 
         const client = new AzureOpenAI({
-            endpoint: process.env.AZURE_OPENAI_ENDPOINT,
-            apiKey: process.env.AZURE_OPENAI_API_KEY,
-            apiVersion: process.env.AZURE_OPENAI_API_VERSION || '2024-12-01-preview',
-            deployment: process.env.AZURE_OPENAI_DEPLOYMENT_NAME,
+            endpoint: process.env.NEXT_PUBLIC_AZURE_OPENAI_ENDPOINT,
+            apiKey: process.env.NEXT_PUBLIC_AZURE_OPENAI_API_KEY,
+            apiVersion: process.env.NEXT_PUBLIC_AZURE_OPENAI_API_VERSION || '2024-12-01-preview',
+            deployment: process.env.NEXT_PUBLIC_AZURE_OPENAI_DEPLOYMENT_NAME,
         });
 
         // --- 1. PREPROCESSOR (Unchanged, just matching types) ---
         // Assuming this remained the same as in your code...
         const preProcessorResult = await client.chat.completions.create({
-            model: process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "",
+            model: process.env.NEXT_PUBLIC_AZURE_OPENAI_DEPLOYMENT_NAME || "",
             response_format: { type: "json_object" },
             messages: [
                 {
@@ -74,7 +74,7 @@ Output ONLY valid JSON: { "isProcessed": boolean, "extractedContext": string | n
 
                         // --- CALL 1: GENERATE SPOKEN TEXT ONLY (Streaming) ---
                         const textStreamResponse = await client.chat.completions.create({
-                            model: process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "",
+                            model: process.env.NEXT_PUBLIC_AZURE_OPENAI_DEPLOYMENT_NAME || "",
                             stream: true,
                             messages: [
                                 {
@@ -139,7 +139,7 @@ Decide if you will speak out loud right now.
 
                         // --- CALL 2: GENERATE METADATA IN JSON (Non-streaming) ---
                         const metaResponse = await client.chat.completions.create({
-                            model: process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "",
+                            model: process.env.NEXT_PUBLIC_AZURE_OPENAI_DEPLOYMENT_NAME || "",
                             response_format: { type: "json_object" },
                             messages: [
                                 {

@@ -45,17 +45,17 @@ export async function POST(request: Request) {
         }
 
         let generatedPrompt = '';
-        if (process.env.AZURE_OPENAI_API_KEY && process.env.AZURE_OPENAI_ENDPOINT) {
+        if (process.env.NEXT_PUBLIC_AZURE_OPENAI_API_KEY && process.env.NEXT_PUBLIC_AZURE_OPENAI_ENDPOINT) {
             try {
                 const client = new AzureOpenAI({
-                    endpoint: process.env.AZURE_OPENAI_ENDPOINT,
-                    apiKey: process.env.AZURE_OPENAI_API_KEY,
-                    apiVersion: process.env.AZURE_OPENAI_API_VERSION || '2024-12-01-preview',
-                    deployment: process.env.AZURE_OPENAI_DEPLOYMENT_NAME,
+                    endpoint: process.env.NEXT_PUBLIC_AZURE_OPENAI_ENDPOINT,
+                    apiKey: process.env.NEXT_PUBLIC_AZURE_OPENAI_API_KEY,
+                    apiVersion: process.env.NEXT_PUBLIC_AZURE_OPENAI_API_VERSION || '2024-12-01-preview',
+                    deployment: process.env.NEXT_PUBLIC_AZURE_OPENAI_DEPLOYMENT_NAME,
                 });
 
                 const openAiResponse = await client.chat.completions.create({
-                    model: process.env.AZURE_OPENAI_DEPLOYMENT_NAME || '',
+                    model: process.env.NEXT_PUBLIC_AZURE_OPENAI_DEPLOYMENT_NAME || '',
                     messages: [
                         {
                             role: 'system',
@@ -92,7 +92,7 @@ Please generate the detailed persona system prompt in English.`
                 console.error("Failed to generate prompt via Azure OpenAI:", aiError);
             }
         } else {
-            console.warn("AZURE_OPENAI_API_KEY or ENDPOINT not set in environment variables!");
+            console.warn("NEXT_PUBLIC_AZURE_OPENAI_API_KEY or ENDPOINT not set in environment variables!");
         }
 
         // Insert into Supabase
@@ -162,17 +162,17 @@ export async function PATCH(request: Request) {
 
         let updatedPrompt = currentStudent.prompt;
 
-        if (shouldRegenerate && process.env.AZURE_OPENAI_API_KEY && process.env.AZURE_OPENAI_ENDPOINT) {
+        if (shouldRegenerate && process.env.NEXT_PUBLIC_AZURE_OPENAI_API_KEY && process.env.NEXT_PUBLIC_AZURE_OPENAI_ENDPOINT) {
             try {
                 const client = new AzureOpenAI({
-                    endpoint: process.env.AZURE_OPENAI_ENDPOINT,
-                    apiKey: process.env.AZURE_OPENAI_API_KEY,
-                    apiVersion: process.env.AZURE_OPENAI_API_VERSION || '2024-12-01-preview',
-                    deployment: process.env.AZURE_OPENAI_DEPLOYMENT_NAME,
+                    endpoint: process.env.NEXT_PUBLIC_AZURE_OPENAI_ENDPOINT,
+                    apiKey: process.env.NEXT_PUBLIC_AZURE_OPENAI_API_KEY,
+                    apiVersion: process.env.NEXT_PUBLIC_AZURE_OPENAI_API_VERSION || '2024-12-01-preview',
+                    deployment: process.env.NEXT_PUBLIC_AZURE_OPENAI_DEPLOYMENT_NAME,
                 });
 
                 const openAiResponse = await client.chat.completions.create({
-                    model: process.env.AZURE_OPENAI_DEPLOYMENT_NAME || '',
+                    model: process.env.NEXT_PUBLIC_AZURE_OPENAI_DEPLOYMENT_NAME || '',
                     messages: [
                         {
                             role: 'system',

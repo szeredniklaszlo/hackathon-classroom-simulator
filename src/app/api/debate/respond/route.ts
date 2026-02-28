@@ -5,15 +5,15 @@ export async function POST(req: Request) {
     try {
         const { topic, userStance, aiStance, transcript } = await req.json();
 
-        if (!process.env.AZURE_OPENAI_API_KEY || !process.env.AZURE_OPENAI_ENDPOINT) {
+        if (!process.env.NEXT_PUBLIC_AZURE_OPENAI_API_KEY || !process.env.NEXT_PUBLIC_AZURE_OPENAI_ENDPOINT) {
             return NextResponse.json({ error: 'Azure OpenAI credentials missing' }, { status: 500 });
         }
 
         const client = new AzureOpenAI({
-            endpoint: process.env.AZURE_OPENAI_ENDPOINT,
-            apiKey: process.env.AZURE_OPENAI_API_KEY,
-            apiVersion: process.env.AZURE_OPENAI_API_VERSION || '2024-12-01-preview',
-            deployment: process.env.AZURE_OPENAI_DEPLOYMENT_NAME,
+            endpoint: process.env.NEXT_PUBLIC_AZURE_OPENAI_ENDPOINT,
+            apiKey: process.env.NEXT_PUBLIC_AZURE_OPENAI_API_KEY,
+            apiVersion: process.env.NEXT_PUBLIC_AZURE_OPENAI_API_VERSION || '2024-12-01-preview',
+            deployment: process.env.NEXT_PUBLIC_AZURE_OPENAI_DEPLOYMENT_NAME,
         });
 
         // Construct the messages history
@@ -48,7 +48,7 @@ DO NOT output markdown blockings (\`\`\`json). Output raw JSON only.`
         }
 
         const response = await client.chat.completions.create({
-            model: process.env.AZURE_OPENAI_DEPLOYMENT_NAME || '',
+            model: process.env.NEXT_PUBLIC_AZURE_OPENAI_DEPLOYMENT_NAME || '',
             messages: messages as any,
             temperature: 0.7,
             max_tokens: 800,

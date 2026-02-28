@@ -20,10 +20,10 @@ interface GeneratedPersona {
 export async function POST() {
     try {
         const client = new AzureOpenAI({
-            endpoint: process.env.AZURE_OPENAI_ENDPOINT,
-            apiKey: process.env.AZURE_OPENAI_API_KEY,
-            apiVersion: process.env.AZURE_OPENAI_API_VERSION || '2024-12-01-preview',
-            deployment: process.env.AZURE_OPENAI_DEPLOYMENT_NAME,
+            endpoint: process.env.NEXT_PUBLIC_AZURE_OPENAI_ENDPOINT,
+            apiKey: process.env.NEXT_PUBLIC_AZURE_OPENAI_API_KEY,
+            apiVersion: process.env.NEXT_PUBLIC_AZURE_OPENAI_API_VERSION || '2024-12-01-preview',
+            deployment: process.env.NEXT_PUBLIC_AZURE_OPENAI_DEPLOYMENT_NAME,
         });
 
         const randomSeed = Math.random().toString(36).substring(7);
@@ -44,7 +44,7 @@ Respond ONLY with a valid JSON object matching this schema:
 }`;
 
         const result = await client.chat.completions.create({
-            model: process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "",
+            model: process.env.NEXT_PUBLIC_AZURE_OPENAI_DEPLOYMENT_NAME || "",
             response_format: { type: "json_object" },
             messages: [
                 { role: "system", content: prompt }
@@ -62,7 +62,7 @@ Respond ONLY with a valid JSON object matching this schema:
         // Generate the system prompt for the persona (using openai direct here like the other route, or just azure)
         // Since we already have Azure Open AI initialized, it's faster to just use it.
         const systemPromptResult = await client.chat.completions.create({
-            model: process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "",
+            model: process.env.NEXT_PUBLIC_AZURE_OPENAI_DEPLOYMENT_NAME || "",
             messages: [
                 { role: 'system', content: 'You are an expert prompt engineer. Based on the provided student details, write an English prompt that can be given to an AI so that the AI behaves exactly like this student in a classroom simulator. Only output the generated prompt, nothing else.' },
                 { role: 'user', content: `Student details:\nName: ${parsedData.name}\nAge: ${parsedData.age}\nType: ${parsedData.type}\nCondition/Disability: ${joinedConditions || 'None'}\nPersonality: ${parsedData.personality}\nActivity Level: ${parsedData.activityLevel}\nConflict Level: ${parsedData.conflictLevel}\nAttention Span: ${parsedData.attentionSpan}` }

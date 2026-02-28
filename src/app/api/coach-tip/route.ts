@@ -14,10 +14,10 @@ export async function POST(request: Request) {
         const { avgEngagement, confusedStudents, recentTranscript, sessionDurationSeconds } = body;
 
         const client = new AzureOpenAI({
-            endpoint: process.env.AZURE_OPENAI_ENDPOINT,
-            apiKey: process.env.AZURE_OPENAI_API_KEY,
-            apiVersion: process.env.AZURE_OPENAI_API_VERSION || '2024-12-01-preview',
-            deployment: process.env.AZURE_OPENAI_DEPLOYMENT_NAME,
+            endpoint: process.env.NEXT_PUBLIC_AZURE_OPENAI_ENDPOINT,
+            apiKey: process.env.NEXT_PUBLIC_AZURE_OPENAI_API_KEY,
+            apiVersion: process.env.NEXT_PUBLIC_AZURE_OPENAI_API_VERSION || '2024-12-01-preview',
+            deployment: process.env.NEXT_PUBLIC_AZURE_OPENAI_DEPLOYMENT_NAME,
         });
 
         const confusedList = confusedStudents.length > 0
@@ -42,7 +42,7 @@ Rules:
 - Respond ONLY with the tip text, nothing else.`;
 
         const result = await client.chat.completions.create({
-            model: process.env.AZURE_OPENAI_DEPLOYMENT_NAME || '',
+            model: process.env.NEXT_PUBLIC_AZURE_OPENAI_DEPLOYMENT_NAME || '',
             messages: [
                 { role: 'system', content: 'You are a concise AI teaching coach. Respond with only your tip, no preamble.' },
                 { role: 'user', content: prompt }

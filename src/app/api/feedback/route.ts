@@ -27,10 +27,10 @@ export async function POST(request: Request) {
         }
 
         const client = new AzureOpenAI({
-            endpoint: process.env.AZURE_OPENAI_ENDPOINT,
-            apiKey: process.env.AZURE_OPENAI_API_KEY,
-            apiVersion: process.env.AZURE_OPENAI_API_VERSION || '2024-12-01-preview',
-            deployment: process.env.AZURE_OPENAI_DEPLOYMENT_NAME,
+            endpoint: process.env.NEXT_PUBLIC_AZURE_OPENAI_ENDPOINT,
+            apiKey: process.env.NEXT_PUBLIC_AZURE_OPENAI_API_KEY,
+            apiVersion: process.env.NEXT_PUBLIC_AZURE_OPENAI_API_VERSION || '2024-12-01-preview',
+            deployment: process.env.NEXT_PUBLIC_AZURE_OPENAI_DEPLOYMENT_NAME,
         });
 
         // Format transcript for the prompt
@@ -65,7 +65,7 @@ The transcript:
 \${formattedTranscript}`;
 
         const result = await client.chat.completions.create({
-            model: process.env.AZURE_OPENAI_DEPLOYMENT_NAME || "",
+            model: process.env.NEXT_PUBLIC_AZURE_OPENAI_DEPLOYMENT_NAME || "",
             response_format: { type: "json_object" },
             messages: [
                 { role: "system", content: "You are a JSON-returning AI Coach." },

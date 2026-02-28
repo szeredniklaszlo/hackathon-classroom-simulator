@@ -22,11 +22,11 @@ export async function POST(req: NextRequest) {
 
         const voice = voiceMap[studentType] || "en-IN-AnanyaNeural";
 
-        const speechKey = process.env.AZURE_SPEECH_KEY;
-        const speechRegion = process.env.AZURE_SPEECH_REGION;
+        const speechKey = process.env.NEXT_PUBLIC_AZURE_SPEECH_KEY;
+        const speechRegion = process.env.NEXT_PUBLIC_AZURE_SPEECH_REGION;
 
         if (!speechKey || !speechRegion) {
-            console.warn("AZURE_SPEECH_KEY or AZURE_SPEECH_REGION is not set.");
+            console.warn("NEXT_PUBLIC_AZURE_SPEECH_KEY or NEXT_PUBLIC_AZURE_SPEECH_REGION is not set.");
             return NextResponse.json({ error: 'Azure Speech credentials are not configured' }, { status: 500 });
         }
 
