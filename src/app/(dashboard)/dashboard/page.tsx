@@ -52,13 +52,19 @@ export default function Dashboard() {
     });
 
     useEffect(() => {
-        const hour = new Date().getHours();
-        if (hour < 12) setGreeting('Good morning');
-        else if (hour < 18) setGreeting('Good afternoon');
-        else setGreeting('Good evening');
+        // Use Budapest / Hungary timezone explicitly
+        const budapestHour = parseInt(
+            new Intl.DateTimeFormat('hu-HU', { hour: 'numeric', hour12: false, timeZone: 'Europe/Budapest' })
+                .format(new Date()),
+            10
+        );
+        if (budapestHour >= 5 && budapestHour < 12) setGreeting('Good morning');
+        else if (budapestHour >= 12 && budapestHour < 18) setGreeting('Good afternoon');
+        else if (budapestHour >= 18 && budapestHour < 22) setGreeting('Good evening');
+        else setGreeting('Good night');
 
         const tick = () => {
-            setCurrentTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+            setCurrentTime(new Date().toLocaleTimeString('hu-HU', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Budapest' }));
         };
         tick();
         const interval = setInterval(tick, 1000);
@@ -76,6 +82,16 @@ export default function Dashboard() {
                 let init = parts[0]?.[0] || 'T';
                 if (parts.length > 1) init += parts[parts.length - 1][0];
                 setInitials(init.toUpperCase());
+            } else {
+                // Guest — generate or reuse a stable guest number for this session
+                let guestName = sessionStorage.getItem('guestName');
+                if (!guestName) {
+                    const num = Math.floor(1000 + Math.random() * 9000);
+                    guestName = `Guest${num}`;
+                    sessionStorage.setItem('guestName', guestName);
+                }
+                setUserName(guestName);
+                setInitials('G');
             }
         };
         fetchUser();
