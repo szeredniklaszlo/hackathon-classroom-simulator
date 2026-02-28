@@ -5,6 +5,7 @@ import { useStore } from '@/store/useStore';
 import { VirtualClass, Student } from '@/types/shared';
 import { Users, Plus, Minus, X, BookOpen, Clock, Activity, Search, PlayCircle, Loader2, Sparkles, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { StudentAvatar } from '@/components/classroom/StudentAvatar';
 
 export default function ClassesPage() {
     const { classes, students, addClass, removeClass, setClasses, setStudents } = useStore();
@@ -529,12 +530,8 @@ export default function ClassesPage() {
                                 <div className="space-y-2">
                                     {(selectedClass.students || []).map((student, idx) => (
                                         <div key={`${student.id}-${idx}`} className="flex items-center gap-3 rounded-lg border border-slate-100 dark:border-slate-800 p-2">
-                                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 overflow-hidden">
-                                                <img
-                                                    src={student.avatar_url || `https://wsrv.nl/?url=${encodeURIComponent(`avatar.iran.liara.run/public/${(student.name?.split(' ')[0].toLowerCase().endsWith('a') || student.name?.split(' ')[0].toLowerCase().endsWith('e') || student.name?.split(' ')[0].toLowerCase().endsWith('i') || student.name?.split(' ')[0].toLowerCase().endsWith('y')) ? 'girl' : 'boy'}?username=` + student.name + '_' + student.age)}`}
-                                                    alt={student.name}
-                                                    className="w-full h-full object-cover"
-                                                />
+                                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 overflow-hidden text-xl">
+                                                <StudentAvatar name={student.name} age={student.age} avatarUrl={student.avatar_url} />
                                             </div>
                                             <div className="flex-1">
                                                 <div className="font-semibold text-slate-900 dark:text-slate-100">{student.name}</div>
@@ -670,12 +667,8 @@ export default function ClassesPage() {
                                                     }`}
                                             >
                                                 <div className="flex items-center gap-2">
-                                                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-700 overflow-hidden border border-slate-200 dark:border-slate-600">
-                                                        <img
-                                                            src={student.avatar_url || `https://wsrv.nl/?url=${encodeURIComponent(`avatar.iran.liara.run/public/${(student.name?.split(' ')[0].toLowerCase().endsWith('a') || student.name?.split(' ')[0].toLowerCase().endsWith('e') || student.name?.split(' ')[0].toLowerCase().endsWith('i') || student.name?.split(' ')[0].toLowerCase().endsWith('y')) ? 'girl' : 'boy'}?username=` + student.name + '_' + student.age)}`}
-                                                            alt={student.name}
-                                                            className="w-full h-full object-cover"
-                                                        />
+                                                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-700 overflow-hidden border border-slate-200 dark:border-slate-600 text-lg">
+                                                        <StudentAvatar name={student.name} age={student.age} avatarUrl={student.avatar_url} />
                                                     </div>
                                                     <span className="font-semibold text-slate-900 dark:text-slate-100">{student.name}</span>
                                                     {student.condition && (

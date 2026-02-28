@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { StudentAvatar } from '@/components/classroom/StudentAvatar';
 import { createClient } from '@/utils/supabase/client';
 import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid,
@@ -374,12 +375,7 @@ export default function Dashboard() {
                             {students.slice(0, 5).map((student) => (
                                 <div key={student.id} className="flex items-center gap-3">
                                     <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-700/50 flex items-center justify-center text-lg shrink-0 overflow-hidden">
-                                        <img
-                                            src={`https://wsrv.nl/?url=${encodeURIComponent(`avatar.iran.liara.run/public?username=${student.name}_${student.age}`)}`}
-                                            alt={student.name}
-                                            className="w-full h-full object-cover"
-                                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                                        />
+                                        <StudentAvatar name={student.name} age={student.age} avatarUrl={student.avatar_url} />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">{student.name}</p>

@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Hand, Volume2 } from 'lucide-react';
 import { Student } from '@/types/shared';
+import { StudentAvatar } from '@/components/classroom/StudentAvatar';
 
 // Helper for color based on mood
 const getMoodBg = (score: number) => {
@@ -11,22 +12,8 @@ const getMoodBg = (score: number) => {
     return "bg-green-50 dark:bg-green-900/20";
 };
 
-// Simple heuristic to guess gender from name (Hungarian/English focus)
-export const guessGender = (fullName: string): 'boy' | 'girl' => {
-    if (!fullName) return 'boy';
-    const firstName = fullName.split(' ')[0].toLowerCase();
-    // Common girl name endings
-    if (firstName.endsWith('a') || firstName.endsWith('e') || firstName.endsWith('i') || firstName.endsWith('y')) {
-        return 'girl';
-    }
-    return 'boy';
-};
-
 export default function StudentCard({ student, idx, isSpeaking = false }: { student: Student, idx: number, isSpeaking?: boolean }) {
     // The parent page.tsx now handles audio playback and passes down the isSpeaking state
-
-    // Derived properties
-    const gender = guessGender(student.name);
 
     return (
         <motion.div
@@ -69,11 +56,12 @@ export default function StudentCard({ student, idx, isSpeaking = false }: { stud
                 </div>
             )}
 
-            <div className={`mb-4 w-24 h-24 rounded-full flex items-center justify-center relative z-0 transition-all duration-300 ${isSpeaking ? 'scale-110 shadow-lg -translate-y-2' : 'shadow-md translate-y-0'} ring-2 ring-white/50 dark:ring-white/10 bg-slate-100 dark:bg-slate-800`}>
-                <img
-                    src={student.avatar_url || `https://wsrv.nl/?url=${encodeURIComponent(`avatar.iran.liara.run/public/${guessGender(student.name)}?username=` + student.name + '_' + student.age)}`}
-                    alt={`${student.name} avatar`}
-                    className={`w-full h-full object-cover rounded-full ${isSpeaking ? 'animate-[bounce_0.5s_infinite]' : ''}`}
+            <div className={`mb-4 w-24 h-24 text-5xl rounded-full flex items-center justify-center relative z-0 transition-all duration-300 ${isSpeaking ? 'scale-110 shadow-lg -translate-y-2' : 'shadow-md translate-y-0'} ring-2 ring-white/50 dark:ring-white/10 bg-slate-100 dark:bg-slate-800 overflow-hidden`}>
+                <StudentAvatar
+                    name={student.name}
+                    age={student.age}
+                    avatarUrl={student.avatar_url}
+                    className={`rounded-full ${isSpeaking ? 'animate-[bounce_0.5s_infinite]' : ''}`}
                 />
 
                 {/* Speaking animation rings */}

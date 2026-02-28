@@ -5,6 +5,7 @@ import { useStore } from '@/store/useStore';
 import { Student, StudentType } from '@/types/shared';
 import { UserPlus, X, Sparkles, AlertCircle, Loader2, ArrowDownAZ, Clock, Save, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { StudentAvatar } from '@/components/classroom/StudentAvatar';
 
 export default function StudentsPage() {
     const { students, addStudent, updateStudent, removeStudent, setStudents } = useStore();
@@ -429,11 +430,7 @@ export default function StudentsPage() {
                         >
                             <div className="flex w-full items-start justify-between relative">
                                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 dark:bg-slate-700/50 text-2xl shadow-sm overflow-hidden">
-                                    <img
-                                        src={student.avatar_url || `https://wsrv.nl/?url=${encodeURIComponent(`avatar.iran.liara.run/public/${(student.name?.split(' ')[0].toLowerCase().endsWith('a') || student.name?.split(' ')[0].toLowerCase().endsWith('e') || student.name?.split(' ')[0].toLowerCase().endsWith('i') || student.name?.split(' ')[0].toLowerCase().endsWith('y')) ? 'girl' : 'boy'}?username=` + student.name + '_' + student.age)}`}
-                                        alt={student.name}
-                                        className="w-full h-full object-cover"
-                                    />
+                                    <StudentAvatar name={student.name} age={student.age} avatarUrl={student.avatar_url} />
                                 </div>
                                 {student.condition && (
                                     <div className="absolute top-0 right-0 bg-indigo-50 dark:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300 text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full z-10 shadow-sm truncate max-w-[120px]">

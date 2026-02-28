@@ -10,6 +10,7 @@ import { Play, Square, ArrowLeft, Clock, Mic, MicOff, Activity, Lightbulb, Trend
 import Link from 'next/link';
 import { useAzureSTT } from '@/hooks/useAzureSTT';
 import StudentCard from '@/components/classroom/StudentCard';
+import { StudentAvatar } from '@/components/classroom/StudentAvatar';
 
 export default function VirtualClassroom() {
     const params = useParams();
@@ -740,11 +741,7 @@ export default function VirtualClassroom() {
                                     className="bg-white dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700/50 p-3 rounded-2xl shadow-sm flex items-center gap-3"
                                 >
                                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl border ${getMoodColor(student.moodScore)} overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0`}>
-                                        <img
-                                            src={student.avatar_url || `https://wsrv.nl/?url=${encodeURIComponent(`avatar.iran.liara.run/public/${(student.name?.split(' ')[0].toLowerCase().endsWith('a') || student.name?.split(' ')[0].toLowerCase().endsWith('e') || student.name?.split(' ')[0].toLowerCase().endsWith('i') || student.name?.split(' ')[0].toLowerCase().endsWith('y')) ? 'girl' : 'boy'}?username=` + student.name + '_' + student.age)}`}
-                                            alt={`${student.name} avatar`}
-                                            className="w-full h-full object-cover"
-                                        />
+                                        <StudentAvatar name={student.name} age={student.age} avatarUrl={student.avatar_url} />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex justify-between items-center mb-1">
