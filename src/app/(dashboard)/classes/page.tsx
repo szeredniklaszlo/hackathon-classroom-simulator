@@ -519,11 +519,13 @@ export default function ClassesPage() {
                                         const count = selectedStudentCounts[student.id];
                                         const isSelected = count !== undefined;
                                         return (
-                                            <button
-                                                type="button"
+                                            <div
                                                 key={student.id}
+                                                role="button"
+                                                tabIndex={0}
                                                 onClick={() => toggleStudentSelection(student.id)}
-                                                className={`flex w-full items-center justify-between rounded-lg p-3 transition-colors ${isSelected ? 'bg-blue-50/50 dark:bg-sky-900/30 ring-1 ring-primary/30 dark:ring-sky-500/30' : 'hover:bg-slate-50 dark:hover:bg-slate-800/80'
+                                                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') toggleStudentSelection(student.id); }}
+                                                className={`flex w-full items-center justify-between rounded-lg p-3 transition-colors cursor-pointer outline-none focus:ring-2 focus:ring-primary/20 ${isSelected ? 'bg-blue-50/50 dark:bg-sky-900/30 ring-1 ring-primary/30 dark:ring-sky-500/30' : 'hover:bg-slate-50 dark:hover:bg-slate-800/80'
                                                     }`}
                                             >
                                                 <div className="flex items-center gap-2">
@@ -567,7 +569,7 @@ export default function ClassesPage() {
                                                         {isSelected && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3 h-3"><polyline points="20 6 9 17 4 12"></polyline></svg>}
                                                     </div>
                                                 </div>
-                                            </button>
+                                            </div>
                                         );
                                     })}
                                 </div>
