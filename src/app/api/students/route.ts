@@ -111,6 +111,117 @@ Please generate the detailed persona system prompt in English.`
     }
 }
 
+export async function PATCH(request: Request) {
+    try {
+        const body = await request.json();
+        const { id, name, age, emoji, personality, activity_level, conflict_level, attention_span, type, condition } = body;
+
+        if (!id) {
+            return NextResponse.json({ error: 'Missing student ID' }, { status: 400 });
+        }
+
+        // Fetch current student to check if we need to regenerate prompt
+        const { data: currentStudent, error: fetchError } = await supabase
+            .from('student_personas')
+            .select('*')
+            .eq('id', id)
+            .single();
+
+        if (fetchError || !currentStudent) {
+            return NextResponse.json({ error: 'Student not found' }, { status: 404 });
+        }
+
+        // Determine if we should regenerate the AI prompt
+        // We regenerate if name, age, type, condition, or personality-defining levels change
+        const shouldRegenerate =
+            name !== currentStudent.name ||
+            age !== currentStudent.age ||
+            personality !== currentStudent.personality ||
+            activity_level !== currentStudent.activity_level ||
+            conflict_level !== currentStudent.conflict_level ||
+            attention_span !== currentStudent.attention_span ||
+            condition !== currentStudent.condition;
+
+        let updatedPrompt = currentStudent.prompt;
+
+        if (shouldRegenerate && process.env.AZURE_OPENAI_API_KEY && process.env.AZURE_OPENAI_ENDPOINT) {
+            try {
+                const client = new AzureOpenAI({
+                    endpoint: process.env.AZURE_OPENAI_ENDPOINT,
+                    apiKey: process.env.AZURE_OPENAI_API_KEY,
+                    apiVersion: process.env.AZURE_OPENAI_API_VERSION || '2024-12-01-preview',
+                    deployment: process.env.AZURE_OPENAI_DEPLOYMENT_NAME,
+                });
+
+                const openAiResponse = await client.chat.completions.create({
+                    model: process.env.AZURE_OPENAI_DEPLOYMENT_NAME || '',
+                    messages: [
+                        {
+                            role: 'system',
+                            content: `Te egy nagyon profi Prompt Engineer vagy, aki AI alapú oktatási szimulátorhoz készít rendkívül részletes "System Prompt"-ot. 
+Készítsd el a tanuló system promptját EGY/ELSŐ SZEMÉLYBE ("You are..."). 
+A prompt tartalmazza:
+- Milyen a tanuló háttérsztorija, személyisége és viselkedése a tanórán.
+- Hogyan reagál kérdésekre, hogyan kommunikál.
+- Milyen speciális betegségei vannak, azok hogyan jelennek meg (pl. figyelemzavar).
+- Mit tesz, ha unatkozik, ha dicséri a tanár, ha felszólítják de nem tudja.
+A válaszodban CSAK ÉS KIZÁRÓLAG az elkészített teljes angol nyelvű system prompt szerepeljen, semmi más.`
+                        },
+                        {
+                            role: 'user',
+                            content: `Student details (UPDATED):
+Name: ${name}
+Age: ${age}
+Type/Role: ${type}
+Condition/Disability: ${condition || 'None'}
+Personality: ${personality}
+Activity Level (0-100): ${activity_level}
+Conflict Level (0-100): ${conflict_level}
+Attention Span (0-100): ${attention_span}
+
+Please generate the detailed persona system prompt in English.`
+                        }
+                    ],
+                });
+
+                updatedPrompt = openAiResponse.choices?.[0]?.message?.content?.trim() || updatedPrompt;
+            } catch (aiError) {
+                console.error("Failed to re-generate prompt via Azure OpenAI:", aiError);
+            }
+        }
+
+        // Update in Supabase
+        const { data, error } = await supabase
+            .from('student_personas')
+            .update({
+                name,
+                age,
+                emoji,
+                personality,
+                activity_level,
+                conflict_level,
+                attention_span,
+                type,
+                condition: condition || null,
+                prompt: updatedPrompt
+            })
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) {
+            console.error("Supabase Error:", error);
+            return NextResponse.json({ error: error.message }, { status: 500 });
+        }
+
+        return NextResponse.json({ student: data }, { status: 200 });
+
+    } catch (error) {
+        console.error("API Error:", error);
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    }
+}
+
 export async function GET(request: Request) {
     try {
         const { searchParams } = new URL(request.url);

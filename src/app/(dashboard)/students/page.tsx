@@ -7,9 +7,10 @@ import { UserPlus, X, Sparkles, AlertCircle, Loader2, ArrowDownAZ, Clock, Save }
 import { toast } from 'sonner';
 
 export default function StudentsPage() {
-    const { students, addStudent, setStudents } = useStore();
+    const { students, addStudent, updateStudent, setStudents } = useStore();
     const [isLoadingStudents, setIsLoadingStudents] = useState(true);
     const [sortOption, setSortOption] = useState<'newest' | 'oldest' | 'name'>('newest');
+    const [editingStudent, setEditingStudent] = useState<Student | null>(null);
 
     // Fetch students on mount
     useEffect(() => {
@@ -69,6 +70,7 @@ export default function StudentsPage() {
     const [ageError, setAgeError] = useState('');
 
     const openCreateDrawer = () => {
+        setEditingStudent(null);
         setNewName('');
         setNewEmoji('🧠');
         setNewAge('');
@@ -78,6 +80,36 @@ export default function StudentsPage() {
         setActivityLevel(50);
         setConflictLevel(20);
         setAttentionSpan(50);
+        setAgeError('');
+        setNameError('');
+        setIsDrawerOpen(true);
+    };
+
+    const handleEditClick = (student: Student) => {
+        setEditingStudent(student);
+        setNewName(student.name);
+        setNewEmoji(student.emoji || '🧠');
+        setNewAge(student.age);
+
+        // Handle condition parsing (assuming comma separated string in DB)
+        const condString = student.condition || '';
+        const presets = ['ADHD', 'Autism', 'Dyslexia', 'Anxiety'];
+        const parts = condString.split(',').map(s => s.trim()).filter(Boolean);
+
+        const selectedPresets = parts.filter(p => presets.includes(p));
+        const customParts = parts.filter(p => !presets.includes(p));
+
+        setNewConditions(selectedPresets);
+        setCustomCondition(customParts.join(', '));
+        setNewPersonality(student.personality || '');
+
+        // We don't have sliders stored in the local Student type currently, 
+        // so we'll use defaults or you might want to fetch full details.
+        // For now, let's stick to defaults or mock values.
+        setActivityLevel(50);
+        setConflictLevel(20);
+        setAttentionSpan(50);
+
         setAgeError('');
         setNameError('');
         setIsDrawerOpen(true);
@@ -133,15 +165,17 @@ export default function StudentsPage() {
 
         setIsGenerating(true);
         const type = determineStudentType();
+        const condition = [...newConditions, ...(customCondition.trim() ? [customCondition.trim()] : [])].join(', ') || null;
 
         try {
             // Call the Backend API
             const response = await fetch('/api/students', {
-                method: 'POST',
+                method: editingStudent ? 'PATCH' : 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
+                    id: editingStudent?.id, // Only for PATCH
                     name: newName,
                     age: newAge,
                     emoji: newEmoji,
@@ -150,36 +184,41 @@ export default function StudentsPage() {
                     conflict_level: conflictLevel,
                     attention_span: attentionSpan,
                     type: type,
-                    condition: [...newConditions, ...(customCondition.trim() ? [customCondition.trim()] : [])].join(', ') || null
+                    condition: condition
                 }),
             });
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to generate student');
+                throw new Error(errorData.error || 'Failed to save student');
             }
 
             const { student: dbStudent } = await response.json();
 
             // Construct client state student
-            const newStudent: Student = {
-                id: dbStudent.id, // Use UUID from Supabase
+            const studentData: Student = {
+                id: dbStudent.id,
                 name: newName,
                 age: newAge as number,
-                type: type,
-                condition: [...newConditions, ...(customCondition.trim() ? [customCondition.trim()] : [])].join(', ') || null,
+                type: dbStudent.type || type,
+                condition: condition,
                 personality: newPersonality,
                 created_at: dbStudent.created_at || new Date().toISOString(),
                 emoji: newEmoji,
-                moodScore: 50 + Math.floor(Math.random() * 30), // random starting mood 50-80
-                raisedHand: false,
-                learningStatus: 'Awaiting first lesson...',
+                moodScore: editingStudent ? editingStudent.moodScore : 50 + Math.floor(Math.random() * 30),
+                raisedHand: editingStudent ? editingStudent.raisedHand : false,
+                learningStatus: editingStudent ? editingStudent.learningStatus : 'Awaiting first lesson...',
             };
 
-            addStudent(newStudent);
-            toast.success('Student successfully generated and saved!', {
-                description: `${newName} added to the persona pool.`,
-            });
+            if (editingStudent) {
+                updateStudent(studentData);
+                toast.success('Student updated successfully!');
+            } else {
+                addStudent(studentData);
+                toast.success('Student successfully generated and saved!', {
+                    description: `${newName} added to the persona pool.`,
+                });
+            }
             closeDrawer();
         } catch (error: any) {
             console.error("Failed to save student:", error);
@@ -308,9 +347,10 @@ export default function StudentsPage() {
             ) : (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {sortedStudents.map((student) => (
-                        <div
+                        <button
                             key={student.id}
-                            className="group flex flex-col items-start overflow-hidden rounded-2xl bg-white dark:bg-slate-800/80 p-5 shadow-sm ring-1 ring-slate-100 dark:ring-slate-700/50 transition-all hover:-translate-y-1 hover:shadow-md hover:ring-indigo-500/20 dark:hover:ring-indigo-500/30"
+                            onClick={() => handleEditClick(student)}
+                            className="group flex flex-col items-start text-left w-full overflow-hidden rounded-2xl bg-white dark:bg-slate-800/80 p-5 shadow-sm ring-1 ring-slate-100 dark:ring-slate-700/50 transition-all hover:-translate-y-1 hover:shadow-md hover:ring-indigo-500/20 dark:hover:ring-indigo-500/30"
                         >
                             <div className="flex w-full items-start justify-between relative">
                                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-50 dark:bg-slate-700/50 text-2xl shadow-sm">
@@ -342,7 +382,7 @@ export default function StudentsPage() {
                                 </div>
                                 <p className="text-slate-600 dark:text-slate-400 line-clamp-2">{student.personality || "-"}</p>
                             </div>
-                        </div>
+                        </button>
                     ))}
                 </div>
             )}
@@ -362,9 +402,9 @@ export default function StudentsPage() {
             >
                 <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 p-6">
                     <div className="flex items-center gap-2">
-                        <UserPlus className="text-secondary dark:text-sky-400" size={20} />
+                        {editingStudent ? <UserPlus className="text-indigo-500" size={20} /> : <UserPlus className="text-secondary dark:text-sky-400" size={20} />}
                         <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                            Create New Persona
+                            {editingStudent ? 'Edit Persona' : 'Create New Persona'}
                         </h2>
                     </div>
                     <button
