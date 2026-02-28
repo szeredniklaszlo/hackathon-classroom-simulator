@@ -83,7 +83,7 @@ Attention Span (0-100): ${attention_span}
 Please generate the detailed persona system prompt in English.`
                         }
                     ],
-                    //temperature: 0.8,
+                    temperature: 1.3,
                 });
 
                 generatedPrompt = openAiResponse.choices?.[0]?.message?.content?.trim() || '';
@@ -200,6 +200,7 @@ Attention Span (0-100): ${attention_span}
 Please generate the detailed persona system prompt in English.`
                         }
                     ],
+                    temperature: 1.3,
                 });
 
                 updatedPrompt = openAiResponse.choices?.[0]?.message?.content?.trim() || updatedPrompt;

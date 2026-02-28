@@ -68,7 +68,8 @@ The transcript:
             messages: [
                 { role: "system", content: "You are a JSON-returning AI Coach." },
                 { role: "user", content: prompt }
-            ]
+            ],
+            temperature: 1.3,
         });
 
         const content = result.choices[0]?.message?.content;

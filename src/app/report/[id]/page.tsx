@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { mockTranscript, mockAIFeedback } from '@/lib/mockData';
 import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
-import { Download, Save, CheckCircle2, AlertCircle, Lightbulb, ArrowLeft, PenLine, RefreshCcw, Clock, TrendingUp, TrendingDown, Activity } from 'lucide-react';
+import { Download, Save, CheckCircle2, AlertCircle, Lightbulb, ArrowLeft, PenLine, RefreshCcw, Clock, TrendingUp, TrendingDown, Activity, BookOpen } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
