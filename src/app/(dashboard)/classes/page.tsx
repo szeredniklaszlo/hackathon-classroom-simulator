@@ -78,6 +78,7 @@ export default function ClassesPage() {
     // Form State for creating a class
     const [newName, setNewName] = useState('');
     const [newSubject, setNewSubject] = useState('');
+    const [newEmoji, setNewEmoji] = useState('🏫');
     const [selectedStudentCounts, setSelectedStudentCounts] = useState<Record<string, number>>({});
 
     // Validation states
@@ -108,6 +109,8 @@ export default function ClassesPage() {
     const openCreateDrawer = () => {
         setNewName('');
         setNewSubject('');
+        const randomEmojis = ['🏫', '📚', '🧪', '🎨', '🧬', '🧠', '💻', '🎭', '🎼', '⚽', '🌍', '📐'];
+        setNewEmoji(randomEmojis[Math.floor(Math.random() * randomEmojis.length)]);
         setSelectedStudentCounts({});
         setSearchQuery('');
         setNameError('');
@@ -242,6 +245,7 @@ export default function ClassesPage() {
                 body: JSON.stringify({
                     name: newName,
                     subject: newSubject,
+                    emoji: newEmoji,
                     description: 'Custom created class.',
                     students: classStudents,
                 })
@@ -304,8 +308,8 @@ export default function ClassesPage() {
                             onClick={() => openViewDrawer(vClass)}
                             className="group relative flex flex-col items-start overflow-hidden rounded-2xl bg-white dark:bg-slate-800/80 p-6 text-left shadow-sm ring-1 ring-slate-100 dark:ring-slate-700/50 transition-all hover:-translate-y-1 hover:shadow-md hover:ring-primary/20 dark:hover:ring-sky-500/30"
                         >
-                            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 dark:bg-sky-900/30 text-sky-500 dark:text-sky-400 shadow-sm transition-transform group-hover:scale-105">
-                                <BookOpen size={32} />
+                            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-blue-50 dark:bg-sky-900/30 text-sky-500 dark:text-sky-400 shadow-sm transition-transform group-hover:scale-105 text-3xl">
+                                {vClass.emoji || '🏫'}
                             </div>
                             <h3 className="mb-1 text-lg font-bold text-slate-900 dark:text-slate-100">{vClass.name}</h3>
                             <div className="mb-4 flex items-center gap-1.5 text-sm font-medium text-slate-500 dark:text-slate-400">
@@ -353,8 +357,8 @@ export default function ClassesPage() {
                     {drawerMode === 'view' && selectedClass && (
                         <div className="space-y-6">
                             <div className="flex items-center gap-4">
-                                <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-blue-50 dark:bg-sky-900/40 text-sky-500 dark:text-sky-400">
-                                    <BookOpen size={40} />
+                                <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-2xl bg-blue-50 dark:bg-sky-900/40 text-sky-500 dark:text-sky-400 text-4xl">
+                                    {selectedClass.emoji || '🏫'}
                                 </div>
                                 <div>
                                     <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{selectedClass.name}</h3>
@@ -456,6 +460,31 @@ export default function ClassesPage() {
                                             {subjectError}
                                         </p>
                                     )}
+                                </div>
+
+                                <div>
+                                    <label className="mb-1.5 block text-sm font-semibold text-slate-900 dark:text-slate-200">Emoji *</label>
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            value={newEmoji}
+                                            onChange={(e) => setNewEmoji(e.target.value)}
+                                            placeholder="🏫"
+                                            className="w-16 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent dark:bg-slate-900/50 dark:text-slate-100 px-4 py-2.5 outline-none text-center text-xl"
+                                        />
+                                        <div className="flex flex-1 flex-wrap gap-2 rounded-xl border border-slate-100 dark:border-slate-800 p-2">
+                                            {['🏫', '📚', '🧪', '🎨', '🧬', '🧠', '💻', '🎭', '🎼', '⚽', '🌍', '📐'].map(emoji => (
+                                                <button
+                                                    key={emoji}
+                                                    type="button"
+                                                    onClick={() => setNewEmoji(emoji)}
+                                                    className={`h-10 w-10 rounded-lg text-xl transition-all hover:bg-slate-100 dark:hover:bg-slate-800 ${newEmoji === emoji ? 'bg-primary/10 ring-1 ring-primary/30' : ''}`}
+                                                >
+                                                    {emoji}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
 
                             </div>

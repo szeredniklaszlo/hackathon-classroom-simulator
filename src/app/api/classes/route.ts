@@ -9,7 +9,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { name, subject, description, students } = body;
+        const { name, subject, emoji, description, students } = body;
 
         // Basic Validation
         if (!name) {
@@ -23,6 +23,7 @@ export async function POST(request: Request) {
                 {
                     name,
                     subject: subject || null,
+                    emoji: emoji || '🏫',
                     description: description || null,
                     students: students || []
                 }
