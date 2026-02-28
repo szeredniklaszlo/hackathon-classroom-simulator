@@ -33,7 +33,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { name, age, emoji, personality, activity_level, conflict_level, attention_span, type, condition } = body;
+        const { name, age, personality, activity_level, conflict_level, attention_span, type, condition } = body;
 
         // Basic Validation
         if (!name || type === undefined) {
@@ -102,7 +102,6 @@ Please generate the detailed persona system prompt in English.`
                 {
                     name,
                     age,
-                    emoji,
                     personality,
                     activity_level,
                     conflict_level,
@@ -132,7 +131,7 @@ Please generate the detailed persona system prompt in English.`
 export async function PATCH(request: Request) {
     try {
         const body = await request.json();
-        const { id, name, age, emoji, personality, activity_level, conflict_level, attention_span, type, condition } = body;
+        const { id, name, age, personality, activity_level, conflict_level, attention_span, type, condition } = body;
 
         if (!id) {
             return NextResponse.json({ error: 'Missing student ID' }, { status: 400 });
@@ -215,7 +214,6 @@ Please generate the detailed persona system prompt in English.`
             .update({
                 name,
                 age,
-                emoji,
                 personality,
                 activity_level,
                 conflict_level,
@@ -249,7 +247,7 @@ export async function GET(request: Request) {
 
         let query = supabase
             .from('student_personas')
-            .select('id, name, age, emoji, type, prompt, condition, personality, avatar_url, created_at')
+            .select('id, name, age, type, prompt, condition, personality, avatar_url, created_at')
             .order('created_at', { ascending: false });
 
         if (searchQuery) {

@@ -306,8 +306,8 @@ export default function Dashboard() {
                                     key={vClass.id}
                                     className="group flex items-center gap-4 rounded-xl border border-slate-100 dark:border-slate-700/50 p-3 transition-all hover:bg-slate-50 dark:hover:bg-slate-700/30 hover:border-sky-100 dark:hover:border-sky-900/40"
                                 >
-                                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-700/50 text-2xl">
-                                        {vClass.emoji}
+                                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 dark:bg-slate-700/50 text-sky-500 dark:text-sky-400">
+                                        <BookOpen size={24} />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between">

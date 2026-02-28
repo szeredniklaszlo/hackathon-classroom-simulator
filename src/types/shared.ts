@@ -50,7 +50,6 @@ export interface Student {
     name: string;
     age: number;
     type: StudentType;
-    emoji: string;
     moodScore: number; // 0-100
     raisedHand: boolean;
     learningStatus: string;
@@ -68,7 +67,6 @@ export interface VirtualClass {
     id: string;
     name: string;
     subject: string;
-    emoji: string;
     description: string;
     students: Student[];
 }

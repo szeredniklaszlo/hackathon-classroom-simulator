@@ -422,7 +422,7 @@ export default function VirtualDiary() {
                     <div className="border-b border-slate-100 dark:border-slate-800 pb-6 mb-8 text-center sm:text-left">
                         <h2 className="text-3xl font-extrabold text-slate-900 dark:text-slate-100 mb-2">{currentClass?.subject || 'Beszámoló'}</h2>
                         <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 text-sm font-medium text-slate-500 dark:text-slate-400">
-                            <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full"><span className="text-lg">{currentClass?.emoji || '📚'}</span> {currentClass?.name || 'Ismeretlen Osztály'}</span>
+                            <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full"><BookOpen size={16} className="text-sky-500" /> {currentClass?.name || 'Ismeretlen Osztály'}</span>
                             <span className="bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">{currentClass?.students?.length || 0} Students</span>
                             {sessionStats?.durationSeconds && (
                                 <span className="flex items-center gap-1.5 bg-indigo-50 dark:bg-indigo-900/20 px-3 py-1 rounded-full text-indigo-700 dark:text-indigo-400 font-bold border border-indigo-100 dark:border-indigo-800/50">

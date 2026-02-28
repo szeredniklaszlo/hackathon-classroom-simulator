@@ -89,7 +89,7 @@ export default function StudentCard({ student, idx, isSpeaking = false }: { stud
 
             <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur px-4 py-2 rounded-xl text-center shadow-sm w-full border border-white/50 dark:border-slate-700/50 z-10 relative">
                 <h4 className="font-extrabold text-slate-800 dark:text-slate-100 tracking-tight text-lg truncate">{student.name}</h4>
-                <p className="text-base font-semibold text-slate-500 dark:text-slate-400 mt-0.5" title={student.type}>{student.emoji} <span className="text-xs ml-1 font-medium text-slate-400">• {student.age}y</span></p>
+                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-0.5" title={student.type}>{student.age} years old</p>
             </div>
         </motion.div>
     );

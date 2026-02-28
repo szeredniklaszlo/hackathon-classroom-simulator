@@ -550,7 +550,7 @@ export default function VirtualClassroom() {
                 <aside className="w-80 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 overflow-y-auto flex flex-col shadow-[-4px_0_15px_-5px_rgba(0,0,0,0.05)] dark:shadow-none z-20 hidden md:flex">
                     <div className="p-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900">
                         <h2 className="font-extrabold text-slate-800 dark:text-slate-100 text-lg flex items-center gap-2">
-                            <span className="text-primary">📊</span> Mood Meter
+                            <span className="text-primary"><Activity size={20} /></span> Mood Meter
                         </h2>
                         <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">Ascending order (lowest engagement first)</p>
                     </div>

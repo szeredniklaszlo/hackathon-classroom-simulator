@@ -8,7 +8,6 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 interface GeneratedPersona {
     name: string;
-    emoji: string;
     age: number;
     condition: string[];
     personality: string;
@@ -33,7 +32,6 @@ Generate a realistic, completely random student persona. It should be an English
 Respond ONLY with a valid JSON object matching this schema:
 {
   "name": "FirstName LastName",
-  "emoji": "a single emoji representing them",
   "age": 12, // number between 6 and 18
   "condition": ["ADHD", "Anxiety"], // an array of string conditions in English, or [] if none
   "personality": "A brief description of their personality, learning style, and typical classroom behavior.",
@@ -77,7 +75,6 @@ Respond ONLY with a valid JSON object matching this schema:
                 {
                     name: parsedData.name,
                     age: parsedData.age,
-                    emoji: parsedData.emoji,
                     personality: parsedData.personality,
                     activity_level: parsedData.activityLevel,
                     conflict_level: parsedData.conflictLevel,
