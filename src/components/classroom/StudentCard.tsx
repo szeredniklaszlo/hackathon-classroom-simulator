@@ -1,10 +1,8 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Hand, Volume2 } from 'lucide-react';
 import { Student } from '@/types/shared';
-import { toast } from 'sonner';
 
 // Helper for color based on mood
 const getMoodBg = (score: number) => {

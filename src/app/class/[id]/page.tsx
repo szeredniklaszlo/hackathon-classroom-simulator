@@ -6,10 +6,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Student, TranscriptEntry } from '@/types/shared';
 import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
-import { Play, Square, Save, UserPlus, Hand, ArrowLeft, Clock, Mic, MicOff, Activity, Lightbulb, TrendingDown, Zap } from 'lucide-react';
+import { Play, Square, ArrowLeft, Clock, Mic, MicOff, Activity, Lightbulb, TrendingDown, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { useAzureSTT } from '@/hooks/useAzureSTT';
-import StudentCard, { guessGender } from '@/components/classroom/StudentCard';
+import StudentCard from '@/components/classroom/StudentCard';
 
 export default function VirtualClassroom() {
     const params = useParams();
