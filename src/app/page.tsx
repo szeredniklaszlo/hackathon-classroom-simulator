@@ -7,6 +7,7 @@ import {
     Zap, Shield, BarChart3, ArrowRight, CheckCircle2, GraduationCap,
     Circle, Cpu, Activity
 } from 'lucide-react';
+import DemoButton from '@/components/DemoButton';
 
 // ─────────────────────────────────────────────────
 // Typewriter hook
@@ -266,6 +267,7 @@ export default function LandingPage() {
                         >
                             Sign In
                         </Link>
+                        <DemoButton variant="nav" />
                         <Link
                             href="/login"
                             className="flex items-center gap-1.5 bg-primary text-white text-sm font-bold px-4 py-2 rounded-xl shadow-md shadow-primary/30 hover:bg-sky-500 hover:scale-[1.03] transition-all"
@@ -338,13 +340,7 @@ export default function LandingPage() {
                             <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
                         </Link>
 
-                        <Link
-                            href="/dashboard"
-                            className="flex items-center gap-2 text-white/70 hover:text-white font-semibold px-6 py-4 rounded-2xl border border-white/20 hover:border-white/40 hover:bg-white/5 transition-all text-base"
-                        >
-                            <Sparkles size={16} />
-                            Continue as Guest
-                        </Link>
+                        <DemoButton variant="hero" />
                     </div>
 
                     {/* Social proof */}

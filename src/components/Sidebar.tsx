@@ -2,15 +2,17 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, UserSquare, BrainCircuit, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, UserSquare, BrainCircuit, LogOut, MessageSquareQuote } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import DemoButton from '@/components/DemoButton';
 
 const navLinks = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Classes', href: '/classes', icon: Users },
     { name: 'Student Personas', href: '/students', icon: UserSquare },
+    { name: 'Debate Coach', href: '/debate', icon: MessageSquareQuote },
 ];
 
 export default function Sidebar() {
@@ -78,6 +80,14 @@ export default function Sidebar() {
                         </span>
                     </Link>
 
+                    {/* 🚀 Demo Mode CTA */}
+                    <div className="mb-6">
+                        <DemoButton variant="sidebar" />
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 text-center mt-1.5">
+                            4 AI students · No setup needed
+                        </p>
+                    </div>
+
                     {/* Navigation Links */}
                     <nav className="flex-1 space-y-2">
                         {navLinks.map((link) => {
@@ -102,6 +112,14 @@ export default function Sidebar() {
                     {/* Theme Toggle */}
                     <div className="mt-4 border-t border-slate-100 dark:border-slate-800 pt-4">
                         <ThemeToggle />
+                    </div>
+
+                    {/* Azure Badge */}
+                    <div className="mt-4 flex items-center justify-center gap-2 rounded-xl border border-[#0078D4]/20 bg-[#0078D4]/5 px-3 py-2">
+                        <svg width="14" height="14" viewBox="0 0 48 48" fill="#0078D4" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M28.17 4L16 22.39l12.38 14.56H48zM0 36.55l10.21 7.45h22.59l-5.35-7.45z" />
+                        </svg>
+                        <span className="text-xs font-bold text-[#0078D4] dark:text-sky-400">Powered by Azure</span>
                     </div>
 
                     {/* Teacher / Guest Profile + Logout */}

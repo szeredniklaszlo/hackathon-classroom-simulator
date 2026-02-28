@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Student, TranscriptEntry } from '@/types/shared';
 import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
-import { Play, Square, Save, UserPlus, Hand, ArrowLeft, Clock, Mic, MicOff, Activity } from 'lucide-react';
+import { Play, Square, Save, UserPlus, Hand, ArrowLeft, Clock, Mic, MicOff, Activity, Lightbulb, TrendingDown, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { useAzureSTT } from '@/hooks/useAzureSTT';
 import StudentCard, { guessGender } from '@/components/classroom/StudentCard';
@@ -468,6 +468,64 @@ export default function VirtualClassroom() {
         return [...students].sort((a, b) => a.moodScore - b.moodScore);
     }, [students]);
 
+    // Derived engagement stats
+    const avgEngagement = useMemo(() => {
+        if (students.length === 0) return 100;
+        return Math.round(students.reduce((sum, s) => sum + s.moodScore, 0) / students.length);
+    }, [students]);
+
+    const confusedStudents = useMemo(() => {
+        return students.filter(s => s.moodScore < 40).map(s => ({ name: s.name, score: s.moodScore }));
+    }, [students]);
+
+    // AI Coaching Tip state
+    const [coachTip, setCoachTip] = useState<string | null>(null);
+    const [isFetchingTip, setIsFetchingTip] = useState(false);
+    const lastTipFetchRef = useRef<number>(0);
+
+    const fetchCoachTip = async () => {
+        if (isFetchingTip) return;
+        const now = Date.now();
+        // Throttle: at most once every 45 seconds
+        if (now - lastTipFetchRef.current < 45000) return;
+        lastTipFetchRef.current = now;
+        setIsFetchingTip(true);
+        try {
+            const recentLines = liveTranscript
+                .filter(e => e.speaker !== '__snapshot__')
+                .slice(-6)
+                .map(e => `[${e.speaker}]: ${e.text}`)
+                .join('\n');
+            const res = await fetch('/api/coach-tip', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    avgEngagement,
+                    confusedStudents,
+                    recentTranscript: recentLines,
+                    sessionDurationSeconds: seconds,
+                }),
+            });
+            if (res.ok) {
+                const { tip } = await res.json();
+                setCoachTip(tip);
+            }
+        } catch (err) {
+            console.error('Coach tip fetch failed', err);
+        } finally {
+            setIsFetchingTip(false);
+        }
+    };
+
+    // Periodic coach tip: fetch every 45s while session is live
+    useEffect(() => {
+        if (!isPlaying) return;
+        // Fetch immediately on play start
+        fetchCoachTip();
+        const interval = setInterval(fetchCoachTip, 45000);
+        return () => clearInterval(interval);
+    }, [isPlaying]); // eslint-disable-line react-hooks/exhaustive-deps
+
     // Derive color based on mood percentage
     const getMoodColor = (score: number) => {
         if (score < 40) return "text-red-500 bg-red-100 dark:bg-red-900/30 border-red-200 dark:border-red-800";
@@ -513,6 +571,36 @@ export default function VirtualClassroom() {
                             Live: {formatTime(seconds)}
                         </div>
                     )}
+
+                    {/* Azure badge — hover to expand */}
+                    <div className="relative group">
+                        <div className="flex items-center gap-1.5 bg-[#0078D4]/10 hover:bg-[#0078D4]/15 border border-[#0078D4]/30 text-[#0078D4] dark:text-sky-400 px-3 py-1.5 rounded-full text-xs font-bold cursor-default transition-colors select-none">
+                            <svg width="14" height="14" viewBox="0 0 48 48" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M28.17 4L16 22.39l12.38 14.56H48zM0 36.55l10.21 7.45h22.59l-5.35-7.45z" />
+                            </svg>
+                            Powered by Azure
+                        </div>
+                        {/* Popover */}
+                        <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-slate-950/50 p-4 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all duration-200 z-50 origin-top-right scale-95 group-hover:scale-100">
+                            <p className="text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Active Azure Services</p>
+                            <div className="space-y-2.5">
+                                {[
+                                    { icon: '🧠', name: 'Azure OpenAI', desc: 'GPT-4o · Student AI & Coach' },
+                                    { icon: '🎙️', name: 'Azure Speech-to-Text', desc: 'Teacher voice recognition' },
+                                    { icon: '🔊', name: 'Azure Text-to-Speech', desc: 'Student voice synthesis' },
+                                ].map(s => (
+                                    <div key={s.name} className="flex items-start gap-3">
+                                        <span className="text-lg leading-none mt-0.5">{s.icon}</span>
+                                        <div>
+                                            <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{s.name}</p>
+                                            <p className="text-[10px] text-slate-400 dark:text-slate-500">{s.desc}</p>
+                                        </div>
+                                        <span className="ml-auto w-2 h-2 rounded-full bg-green-400 mt-1.5 shrink-0" title="Active" />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </header>
 
@@ -549,8 +637,91 @@ export default function VirtualClassroom() {
                     </div>
                 </main>
 
-                {/* Right Sidebar: Mood Meter */}
+                {/* Right Sidebar: Engagement HUD + Mood Meter */}
                 <aside className="w-80 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 overflow-y-auto flex flex-col shadow-[-4px_0_15px_-5px_rgba(0,0,0,0.05)] dark:shadow-none z-20 hidden md:flex">
+
+                    {/* ── Engagement Summary ── */}
+                    <div className="p-5 border-b border-slate-100 dark:border-slate-800">
+                        <h2 className="font-extrabold text-slate-800 dark:text-slate-100 text-base flex items-center gap-2 mb-4">
+                            <span className="text-sky-500"><Zap size={18} /></span> Class Engagement
+                        </h2>
+                        {/* Big avg engagement ring */}
+                        <div className="flex items-center gap-4 mb-4">
+                            <div className="relative w-16 h-16 shrink-0">
+                                <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                                    <circle cx="18" cy="18" r="15.9" fill="none" stroke="currentColor" strokeWidth="3"
+                                        className="text-slate-100 dark:text-slate-800" />
+                                    <circle cx="18" cy="18" r="15.9" fill="none" strokeWidth="3" strokeLinecap="round"
+                                        strokeDasharray={`${avgEngagement} ${100 - avgEngagement}`}
+                                        className={avgEngagement < 40 ? 'stroke-red-500' : avgEngagement < 70 ? 'stroke-amber-500' : 'stroke-green-500'}
+                                        style={{ transition: 'stroke-dasharray 0.5s ease' }}
+                                    />
+                                </svg>
+                                <span className={`absolute inset-0 flex items-center justify-center text-sm font-extrabold ${avgEngagement < 40 ? 'text-red-500' : avgEngagement < 70 ? 'text-amber-500' : 'text-green-600'
+                                    }`}>{avgEngagement}%</span>
+                            </div>
+                            <div className="flex-1">
+                                <p className={`text-sm font-bold ${avgEngagement < 40 ? 'text-red-500' : avgEngagement < 70 ? 'text-amber-500' : 'text-green-600'
+                                    }`}>
+                                    {avgEngagement < 40 ? 'Class is struggling' : avgEngagement < 70 ? 'Moderate engagement' : 'Class is engaged!'}
+                                </p>
+                                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                                    {isPlaying ? `${Math.floor(seconds / 60)}m ${seconds % 60}s into session` : 'Session not started'}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Confused students alert */}
+                        {confusedStudents.length > 0 && (
+                            <div className="flex items-start gap-2 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/50 rounded-xl p-3">
+                                <TrendingDown size={14} className="text-red-500 mt-0.5 shrink-0" />
+                                <div>
+                                    <p className="text-xs font-bold text-red-600 dark:text-red-400 mb-1">Low engagement</p>
+                                    <p className="text-xs text-red-500 dark:text-red-300">
+                                        {confusedStudents.map(s => s.name).join(', ')}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* ── AI Coaching Tip ── */}
+                    <div className="p-5 border-b border-slate-100 dark:border-slate-800">
+                        <h2 className="font-extrabold text-slate-800 dark:text-slate-100 text-base flex items-center gap-2 mb-3">
+                            <span className="text-amber-500"><Lightbulb size={18} /></span> AI Coach Tip
+                        </h2>
+                        {isFetchingTip ? (
+                            <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500">
+                                <span className="w-4 h-4 border-2 border-amber-400 border-t-transparent rounded-full animate-spin inline-block" />
+                                Analyzing lesson...
+                            </div>
+                        ) : coachTip ? (
+                            <AnimatePresence mode="wait">
+                                <motion.div
+                                    key={coachTip}
+                                    initial={{ opacity: 0, y: 6 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/50 rounded-xl p-3"
+                                >
+                                    <p className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+                                        {coachTip}
+                                    </p>
+                                    <button
+                                        onClick={fetchCoachTip}
+                                        className="mt-2 text-[10px] font-semibold text-amber-500 hover:text-amber-600 dark:hover:text-amber-400 transition-colors flex items-center gap-1"
+                                    >
+                                        <Zap size={10} /> Refresh tip
+                                    </button>
+                                </motion.div>
+                            </AnimatePresence>
+                        ) : (
+                            <p className="text-xs text-slate-400 dark:text-slate-500 italic">
+                                {isPlaying ? 'Tip loading...' : 'Start the session to receive coaching tips.'}
+                            </p>
+                        )}
+                    </div>
+
+                    {/* ── Mood Meter ── */}
                     <div className="p-5 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900">
                         <h2 className="font-extrabold text-slate-800 dark:text-slate-100 text-lg flex items-center gap-2">
                             <span className="text-primary"><Activity size={20} /></span> Mood Meter
