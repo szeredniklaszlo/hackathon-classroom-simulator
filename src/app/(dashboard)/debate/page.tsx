@@ -7,10 +7,12 @@ import { useDebateStore } from '@/store/useDebateStore';
 import { useAzureSTT } from '@/hooks/useAzureSTT';
 import { Play, Square, Mic, MicOff, Send, MessageSquareQuote, AlertTriangle, ArrowRight, Activity, BrainCircuit, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { createClient } from '@/utils/supabase/client';
 
 export default function DebateCoachPage() {
     const router = useRouter();
-    const { topic, userStance, aiStance, transcript, isLive, setDebateSetup, addTurn, updateLastTurnCritique, endDebate } = useDebateStore();
+    const { topic, userStance, aiStance, transcript, isLive, setDebateSetup, addTurn, updateLastTurnCritique } = useDebateStore();
+
 
     // Setup State
     const [topicInput, setTopicInput] = useState('');
@@ -21,6 +23,34 @@ export default function DebateCoachPage() {
     const [isAiThinking, setIsAiThinking] = useState(false);
 
     const { isListening, startListening, stopListening, fullTranscript, clearTranscript } = useAzureSTT();
+    // Auth & History State
+    const [userId, setUserId] = useState<string | null>(null);
+    const [pastDebates, setPastDebates] = useState<any[]>([]);
+    const [isLoadingHistory, setIsLoadingHistory] = useState(true);
+
+    useEffect(() => {
+        const fetchUserData = async () => {
+            const supabase = createClient();
+            const { data: { session } } = await supabase.auth.getSession();
+            const uid = session?.user.id || null;
+            setUserId(uid);
+
+            if (uid) {
+                // Fetch past debates for this user
+                const { data } = await supabase
+                    .from('debates')
+                    .select('*')
+                    .eq('user_id', uid)
+                    .order('updated_at', { ascending: false })
+                    .limit(10);
+
+                if (data) setPastDebates(data);
+            }
+            setIsLoadingHistory(false);
+        };
+        fetchUserData();
+    }, [isLive]); // Re-fetch when exiting a live debate back to setup
+
     const transcriptEndRef = useRef<HTMLDivElement>(null);
 
     // Scroll to bottom of transcript
@@ -29,13 +59,13 @@ export default function DebateCoachPage() {
     }, [transcript, isAiThinking]);
 
     // Setup Submit
-    const handleStartDebate = (e: React.FormEvent) => {
+    const handleStartDebate = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!topicInput.trim()) {
             toast.error('Please enter a topic to debate.');
             return;
         }
-        setDebateSetup(topicInput.trim(), stanceInput);
+        await setDebateSetup(topicInput.trim(), stanceInput, userId || undefined);
     };
 
     // User submits an argument
@@ -115,23 +145,40 @@ export default function DebateCoachPage() {
         }
     };
 
-    const handleEndDebate = () => {
-        endDebate();
+    const handleConcludeDebate = () => {
+        useDebateStore.getState().completeDebate();
+        router.push('/debate/report');
+    };
+
+    const handleSaveAndExit = () => {
+        // Just route away, store is automatically synced
+        router.push('/dashboard');
+        useDebateStore.getState().resetDebate();
+    };
+
+    const handleResumeDebate = (debate: any) => {
+        useDebateStore.getState().loadDebate(debate);
+    };
+
+    const handleViewReport = (debate: any) => {
+        useDebateStore.getState().loadDebate(debate);
         router.push('/debate/report');
     };
 
     // ─── SETUP VIEW ────────────────────────────────────────────────────────────
     if (!isLive) {
         return (
-            <div className="max-w-4xl mx-auto p-6 md:p-12">
-                <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 xl:p-12 shadow-xl border border-slate-200 dark:border-slate-800">
+            <div className="max-w-7xl mx-auto p-6 md:p-12 flex flex-col lg:flex-row gap-10">
+
+                {/* Left: Setup Form */}
+                <div className="flex-1 bg-white dark:bg-slate-900 rounded-3xl p-8 xl:p-12 shadow-xl border border-slate-200 dark:border-slate-800">
                     <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center mb-6">
                         <MessageSquareQuote size={32} />
                     </div>
                     <h1 className="text-3xl md:text-4xl font-black text-slate-800 dark:text-white tracking-tight mb-4">
                         Debate Coach
                     </h1>
-                    <p className="text-slate-500 dark:text-slate-400 text-lg mb-10 max-w-2xl">
+                    <p className="text-slate-500 dark:text-slate-400 text-lg mb-10 max-w-xl">
                         Sharpen your argumentation skills. Pick a topic, take a stance, and the AI Examiner will challenge you in real-time, providing live critiques on logical fallacies and argument strength.
                     </p>
 
@@ -183,11 +230,70 @@ export default function DebateCoachPage() {
                                 type="submit"
                                 className="group w-full flex items-center justify-center gap-2 bg-slate-800 dark:bg-white text-white dark:text-slate-900 py-4 rounded-2xl font-bold text-lg hover:bg-black dark:hover:bg-slate-100 transition-all active:scale-[0.98]"
                             >
-                                Start Debate
+                                Start New Debate
                                 <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
                             </button>
                         </div>
                     </form>
+                </div>
+
+                {/* Right: History */}
+                <div className="w-full lg:w-[400px] xl:w-[450px] shrink-0">
+                    <h3 className="font-bold text-slate-800 dark:text-white text-xl mb-6">Your Recent Debates</h3>
+
+                    {isLoadingHistory ? (
+                        <div className="space-y-4">
+                            {[1, 2, 3].map(i => (
+                                <div key={i} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 h-28 animate-pulse" />
+                            ))}
+                        </div>
+                    ) : pastDebates.length === 0 ? (
+                        <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-2xl p-8 text-center">
+                            <BrainCircuit size={40} className="mx-auto text-slate-400 mb-3 opacity-50" />
+                            <p className="text-slate-500 dark:text-slate-400 font-medium">No past debates found.</p>
+                            <p className="text-sm text-slate-400 mt-1">Start a new one to see it here.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                            {pastDebates.map(debate => (
+                                <div key={debate.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 hover:border-blue-300 dark:hover:border-blue-500/50 transition-colors shadow-sm">
+                                    <div className="flex justify-between items-start mb-2 gap-4">
+                                        <h4 className="font-bold text-slate-800 dark:text-white truncate" title={debate.topic}>
+                                            {debate.topic}
+                                        </h4>
+                                        <span className={`shrink-0 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md ${debate.status === 'completed'
+                                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400'
+                                                : 'bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400'
+                                            }`}>
+                                            {debate.status.replace('_', ' ')}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
+                                        You argued: <span className="font-semibold text-slate-700 dark:text-slate-300 capitalize">{debate.user_stance}</span> •
+                                        {new Date(debate.updated_at).toLocaleDateString()}
+                                    </p>
+
+                                    <div className="flex justify-end">
+                                        {debate.status === 'completed' ? (
+                                            <button
+                                                onClick={() => handleViewReport(debate)}
+                                                className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-1"
+                                            >
+                                                View Report <ArrowRight size={12} />
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={() => handleResumeDebate(debate)}
+                                                className="text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-blue-600 hover:text-white px-4 py-2 rounded-lg transition-all"
+                                            >
+                                                Resume Debate
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
         );
@@ -217,13 +323,21 @@ export default function DebateCoachPage() {
                             </span>
                         </div>
                     </div>
-                    <button
-                        onClick={handleEndDebate}
-                        className="flex items-center gap-2 text-sm font-bold px-4 py-2 bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-lg hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-colors"
-                    >
-                        <Square size={14} className="fill-current" />
-                        End Debate
-                    </button>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={handleSaveAndExit}
+                            className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors"
+                        >
+                            Save & Exit
+                        </button>
+                        <button
+                            onClick={handleConcludeDebate}
+                            className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-lg hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-colors"
+                        >
+                            <Square size={12} className="fill-current" />
+                            Evaluate & Conclude
+                        </button>
+                    </div>
                 </div>
 
                 {/* Transcript Scroll Area */}
@@ -244,8 +358,8 @@ export default function DebateCoachPage() {
                                 className={`flex ${turn.speaker === 'user' ? 'justify-end' : 'justify-start'}`}
                             >
                                 <div className={`max-w-[80%] rounded-2xl p-4 ${turn.speaker === 'user'
-                                        ? 'bg-blue-600 text-white rounded-br-none'
-                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-bl-none'
+                                    ? 'bg-blue-600 text-white rounded-br-none'
+                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-100 rounded-bl-none'
                                     }`}>
                                     <p className="leading-relaxed">{turn.text}</p>
                                 </div>
@@ -292,8 +406,8 @@ export default function DebateCoachPage() {
                         <button
                             onClick={isListening ? stopListening : startListening}
                             className={`p-3.5 rounded-xl transition-all ${isListening
-                                    ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/30 animate-pulse'
-                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/30 animate-pulse'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                                 }`}
                         >
                             {isListening ? <MicOff size={18} /> : <Mic size={18} />}

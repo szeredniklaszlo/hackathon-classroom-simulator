@@ -18,7 +18,7 @@ interface EvaluationData {
 
 export default function DebateReportPage() {
     const router = useRouter();
-    const { topic, userStance, transcript, resetDebate } = useDebateStore();
+    const { topic, userStance, transcript, resetDebate, status, evaluation, saveEvaluation } = useDebateStore();
 
     const [evalData, setEvalData] = useState<EvaluationData | null>(null);
     const [isEvaluating, setIsEvaluating] = useState(true);
@@ -28,6 +28,13 @@ export default function DebateReportPage() {
         if (!topic || transcript.length === 0) {
             toast.error("No active debate found.");
             router.push('/debate');
+            return;
+        }
+
+        // If resuming a completed debate, load the stored evaluation
+        if (status === 'completed' && evaluation) {
+            setEvalData(evaluation);
+            setIsEvaluating(false);
             return;
         }
 
@@ -42,6 +49,10 @@ export default function DebateReportPage() {
                 if (!res.ok) throw new Error("Evaluation failed");
                 const data = await res.json();
                 setEvalData(data);
+
+                // Save it back to store & DB
+                await saveEvaluation(data);
+
             } catch (error) {
                 console.error(error);
                 toast.error("Could not generate debate evaluation.");
@@ -51,7 +62,7 @@ export default function DebateReportPage() {
         };
 
         fetchEvaluation();
-    }, [topic, userStance, transcript, router]);
+    }, [topic, userStance, transcript, router, status, evaluation, saveEvaluation]);
 
     const handleExit = () => {
         resetDebate();
