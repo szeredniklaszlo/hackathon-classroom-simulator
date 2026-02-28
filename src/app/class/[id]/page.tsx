@@ -61,6 +61,15 @@ export default function VirtualClassroom() {
         }
     }, [isLoadingData, initialClass, router]);
 
+    // Handle ESC key to "jump out" to dashboard
+    useEffect(() => {
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') router.push('/dashboard');
+        };
+        window.addEventListener('keydown', handleEsc);
+        return () => window.removeEventListener('keydown', handleEsc);
+    }, [router]);
+
     // Update students state when initialClass becomes available, ensuring moodScore exists
     const [students, setStudents] = useState<Student[]>(
         (initialClass?.students || []).map(s => ({

@@ -56,6 +56,15 @@ export default function VirtualDiary() {
         checkAuth();
     }, []);
 
+    // Handle ESC key to "jump out" to dashboard
+    useEffect(() => {
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') router.push('/dashboard');
+        };
+        window.addEventListener('keydown', handleEsc);
+        return () => window.removeEventListener('keydown', handleEsc);
+    }, [router]);
+
     const handleSaveReport = async () => {
         if (isGuest) {
             toast.error("Not logged in", {
