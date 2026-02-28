@@ -104,7 +104,8 @@ Decide if you will speak out loud right now.
 - IF YES: Output EXACTLY AND ONLY the text you say out loud. No quotes, no actions, no metadata.
 - IF NO: Output EXACTLY the word: [SILENCE]`
                                 }
-                            ]
+                            ],
+                            temperature: 1.3,
                         });
 
                         let rawSpokenText = "";

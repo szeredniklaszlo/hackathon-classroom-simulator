@@ -26,8 +26,10 @@ export async function POST() {
             deployment: process.env.AZURE_OPENAI_DEPLOYMENT_NAME,
         });
 
+        const randomSeed = Math.random().toString(36).substring(7);
         const prompt = `You are an expert educational psychologist designing a student persona for a virtual classroom simulator.
 Generate a realistic, completely random student persona. It should be an English speaking student.
+Random seed for diversity: ${randomSeed}.
 
 Respond ONLY with a valid JSON object matching this schema:
 {
@@ -46,7 +48,9 @@ Respond ONLY with a valid JSON object matching this schema:
             response_format: { type: "json_object" },
             messages: [
                 { role: "system", content: prompt }
-            ]
+            ],
+            temperature: 1.3,
+            presence_penalty: 1.0,
         });
 
         const content = result.choices[0]?.message?.content;
@@ -63,7 +67,7 @@ Respond ONLY with a valid JSON object matching this schema:
                 { role: 'system', content: 'You are an expert prompt engineer. Based on the provided student details, write an English prompt that can be given to an AI so that the AI behaves exactly like this student in a classroom simulator. Only output the generated prompt, nothing else.' },
                 { role: 'user', content: `Student details:\nName: ${parsedData.name}\nAge: ${parsedData.age}\nType: ${parsedData.type}\nCondition/Disability: ${joinedConditions || 'None'}\nPersonality: ${parsedData.personality}\nActivity Level: ${parsedData.activityLevel}\nConflict Level: ${parsedData.conflictLevel}\nAttention Span: ${parsedData.attentionSpan}` }
             ],
-            //temperature: 0.7
+            temperature: 1.3,
         });
 
         const generatedPrompt = systemPromptResult.choices[0]?.message?.content?.trim() || '';

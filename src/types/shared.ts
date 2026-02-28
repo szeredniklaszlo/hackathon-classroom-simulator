@@ -66,6 +66,7 @@ export interface VirtualClass {
     id: string;
     name: string;
     subject: string;
+    emoji: string;
     description: string;
     students: Student[];
 }

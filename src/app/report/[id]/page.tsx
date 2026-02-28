@@ -6,14 +6,13 @@ import { motion } from 'framer-motion';
 import { mockTranscript, mockAIFeedback } from '@/lib/mockData';
 import { useStore } from '@/store/useStore';
 import { toast } from 'sonner';
-import { Download, Save, CheckCircle2, AlertCircle, Lightbulb, ArrowLeft, PenLine, RefreshCcw, Clock, TrendingUp, TrendingDown, Activity } from 'lucide-react';
+import { Download, Save, CheckCircle2, AlertCircle, Lightbulb, ArrowLeft, PenLine, RefreshCcw, Clock, TrendingUp, TrendingDown, Activity, BookOpen } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
 import { TranscriptEntry } from '@/types/shared';
-import { BookOpen } from 'lucide-react';
 
 export default function VirtualDiary() {
     const params = useParams();
@@ -630,7 +629,7 @@ export default function VirtualDiary() {
                         ) : (
                             /* Loaded state — chat bubbles */
                             <div className="space-y-4">
-                                {transcript.length > 0 ? transcript.map((entry, idx) => (
+                                {transcript.length > 0 ? transcript.filter(e => e.speaker !== '__snapshot__').map((entry, idx) => (
                                     <motion.div
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
