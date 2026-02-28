@@ -6,6 +6,7 @@ import { LayoutDashboard, Users, UserSquare, BrainCircuit, LogOut } from 'lucide
 import { useEffect, useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import DemoButton from '@/components/DemoButton';
 
 const navLinks = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -77,6 +78,14 @@ export default function Sidebar() {
                             MindSim AI
                         </span>
                     </Link>
+
+                    {/* 🚀 Demo Mode CTA */}
+                    <div className="mb-6">
+                        <DemoButton variant="sidebar" />
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 text-center mt-1.5">
+                            4 AI students · No setup needed
+                        </p>
+                    </div>
 
                     {/* Navigation Links */}
                     <nav className="flex-1 space-y-2">
