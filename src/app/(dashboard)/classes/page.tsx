@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import { VirtualClass, Student } from '@/types/shared';
-import { Users, Plus, Minus, X, BookOpen, Clock, Activity, Search, PlayCircle, Loader2 } from 'lucide-react';
+import { Users, Plus, Minus, X, BookOpen, Clock, Activity, Search, PlayCircle, Loader2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ClassesPage() {
@@ -171,6 +171,9 @@ export default function ClassesPage() {
     };
 
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isAIGenerating, setIsAIGenerating] = useState(false);
+    // 'manual' = manual create in-flight, 'ai' = AI random in-flight, null = idle
+    const [pendingClass, setPendingClass] = useState<'manual' | 'ai' | null>(null);
 
     const handleCreateClass = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -202,6 +205,10 @@ export default function ClassesPage() {
         if (hasError) return;
 
         setIsGenerating(true);
+        // Close drawer immediately and show skeleton
+        closeDrawer();
+        setPendingClass('manual');
+
         const classStudents: Student[] = [];
         Object.entries(selectedStudentCounts).forEach(([studentId, count]) => {
             const baseStudent = students.find(s => s.id === studentId);
@@ -262,14 +269,78 @@ export default function ClassesPage() {
             toast.success('Class saved successfully!', {
                 description: `${newName} added to your active cohorts.`,
             });
-            closeDrawer();
         } catch (error: any) {
             console.error("Failed to save class:", error);
             toast.error('An error occurred while saving.', {
                 description: error.message,
             });
         } finally {
+            setPendingClass(null);
             setIsGenerating(false);
+        }
+    };
+
+    const generateAIClass = async () => {
+        if (students.length === 0) {
+            toast.error('No student personas available!', { description: 'Create some student personas first before generating a class.' });
+            return;
+        }
+
+        setIsAIGenerating(true);
+        setPendingClass('ai');
+
+        const classCombos = [
+            { name: 'Room 101', subject: 'Mathematics', emoji: '📐' },
+            { name: 'Science Lab A', subject: 'Biology', emoji: '🧬' },
+            { name: 'English Seminar', subject: 'English Literature', emoji: '📚' },
+            { name: 'Tech Workshop', subject: 'Computer Science', emoji: '💻' },
+            { name: 'Art Studio', subject: 'Fine Arts', emoji: '🎨' },
+            { name: 'Chemistry Lab', subject: 'Chemistry', emoji: '🧪' },
+            { name: 'History Circle', subject: 'World History', emoji: '🌍' },
+            { name: 'Music Room', subject: 'Music Theory', emoji: '🎼' },
+            { name: 'Drama Hall', subject: 'Drama & Performance', emoji: '🎭' },
+            { name: 'Gym Class A', subject: 'Physical Education', emoji: '⚽' },
+            { name: 'Philosophy Seminar', subject: 'Philosophy', emoji: '🧠' },
+            { name: 'Geography Room', subject: 'Geography', emoji: '🌍' },
+            { name: 'Psychology 101', subject: 'Psychology', emoji: '🧠' },
+            { name: 'Advanced Math', subject: 'Calculus', emoji: '📐' },
+            { name: 'Reading Club', subject: 'Reading & Comprehension', emoji: '📚' },
+        ];
+
+        const combo = classCombos[Math.floor(Math.random() * classCombos.length)];
+
+        // Pick 3-7 random students
+        const shuffled = [...students].sort(() => Math.random() - 0.5);
+        const count = 3 + Math.floor(Math.random() * 5); // 3 to 7
+        const picked = shuffled.slice(0, Math.min(count, shuffled.length));
+
+        try {
+            const response = await fetch('/api/classes', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: combo.name,
+                    subject: combo.subject,
+                    emoji: combo.emoji,
+                    description: 'AI-generated class.',
+                    students: picked,
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to generate class');
+            }
+
+            const { virtualClass: newClass } = await response.json();
+            addClass(newClass);
+            toast.success('AI Class Generated!', { description: `${combo.name} – ${combo.subject} with ${picked.length} students.` });
+        } catch (err: any) {
+            console.error(err);
+            toast.error('Generation failed', { description: err.message });
+        } finally {
+            setPendingClass(null);
+            setIsAIGenerating(false);
         }
     };
 
@@ -281,13 +352,23 @@ export default function ClassesPage() {
                     <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Virtual Classrooms</h1>
                     <p className="mt-1 text-slate-500 dark:text-slate-400">Manage your active classes and simulation environments.</p>
                 </div>
-                <button
-                    onClick={openCreateDrawer}
-                    className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 font-medium text-white shadow-sm transition-all hover:bg-primary/90 hover:shadow-md active:scale-95"
-                >
-                    <Plus size={18} />
-                    New Class
-                </button>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={openCreateDrawer}
+                        className="flex items-center gap-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-2 font-medium text-slate-700 dark:text-slate-300 shadow-sm transition-all hover:bg-slate-50 dark:hover:bg-slate-700/50 active:scale-95"
+                    >
+                        <Plus size={18} />
+                        New Class
+                    </button>
+                    <button
+                        onClick={generateAIClass}
+                        disabled={isAIGenerating}
+                        className="flex items-center gap-2 rounded-xl bg-indigo-500 dark:bg-indigo-600 px-4 py-2 font-medium text-white shadow-sm transition-all hover:bg-indigo-600 dark:hover:bg-indigo-500 hover:shadow-md active:scale-95 disabled:opacity-70 disabled:active:scale-100 disabled:cursor-not-allowed"
+                    >
+                        {isAIGenerating ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
+                        {isAIGenerating ? 'Generating...' : 'Generate Class'}
+                    </button>
+                </div>
             </div>
 
             {/* Grid */}
@@ -295,13 +376,41 @@ export default function ClassesPage() {
                 <div className="flex h-64 items-center justify-center">
                     <Loader2 className="h-8 w-8 animate-spin text-primary dark:text-sky-400" />
                 </div>
-            ) : classes.length === 0 ? (
+            ) : classes.length === 0 && !pendingClass ? (
                 <div className="flex flex-col items-center justify-center h-64 text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-100 dark:border-slate-700/50 border-dashed">
                     <BookOpen className="h-12 w-12 text-slate-300 dark:text-slate-600 mb-3" />
                     <p>No classes created yet.</p>
                 </div>
             ) : (
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                    {/* Skeleton loading card — shown while class is being created/generated */}
+                    {pendingClass && (
+                        <div className="relative flex flex-col items-start overflow-hidden rounded-2xl bg-white dark:bg-slate-800/80 p-6 shadow-sm ring-1 ring-slate-100 dark:ring-slate-700/50 min-h-[180px]">
+                            {/* Emoji placeholder */}
+                            <div className="mb-4 h-16 w-16 rounded-2xl bg-slate-200 dark:bg-slate-700 animate-pulse" />
+                            {/* Name bar */}
+                            <div className="h-5 w-36 rounded-lg bg-slate-200 dark:bg-slate-700 animate-pulse mb-2" />
+                            {/* Subject row */}
+                            <div className="h-4 w-28 rounded-lg bg-slate-100 dark:bg-slate-700/60 animate-pulse mb-6" />
+                            {/* Footer row */}
+                            <div className="mt-auto flex w-full items-center gap-2 border-t border-slate-50 dark:border-slate-700/50 pt-4">
+                                <div className="h-4 w-4 rounded bg-slate-200 dark:bg-slate-700 animate-pulse" />
+                                <div className="h-4 w-20 rounded bg-slate-100 dark:bg-slate-700/60 animate-pulse" />
+                            </div>
+                            {/* Central spinner */}
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/80 dark:bg-slate-900/80 shadow-lg backdrop-blur-sm ring-1 ring-slate-200 dark:ring-slate-700">
+                                    <Loader2 size={22} className="animate-spin text-indigo-500" />
+                                </div>
+                            </div>
+                            {/* Label */}
+                            <div className="absolute bottom-4 left-0 right-0 flex justify-center">
+                                <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 animate-pulse">
+                                    {pendingClass === 'ai' ? 'AI generating…' : 'Saving class…'}
+                                </span>
+                            </div>
+                        </div>
+                    )}
                     {classes.map((vClass) => (
                         <button
                             key={vClass.id}
