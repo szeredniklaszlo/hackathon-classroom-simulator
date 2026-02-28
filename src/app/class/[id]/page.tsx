@@ -83,35 +83,38 @@ export default function VirtualClassroom() {
     const [seconds, setSeconds] = useState(0);
     const [liveTranscript, setLiveTranscript] = useState<TranscriptEntry[]>([]);
 
-    // Audio streaming/TTS refs
-    const audioQueues = useRef<Record<string, string[]>>({});
-    const isPlayingMap = useRef<Record<string, boolean>>({});
+    // Global Audio streaming/TTS refs to ensure sequential playback
+    const globalAudioQueue = useRef<Array<{ studentId: string; studentType: string; text: string }>>([]);
+    const isGlobalPlaying = useRef<boolean>(false);
     const [speakingStudents, setSpeakingStudents] = useState<Record<string, boolean>>({});
 
     const playAudio = async (studentId: string, studentType: string, text: string) => {
-        if (!audioQueues.current[studentId]) audioQueues.current[studentId] = [];
-        audioQueues.current[studentId].push(text);
-        processAudioQueue(studentId, studentType);
+        // Enqueue the sentence globally
+        globalAudioQueue.current.push({ studentId, studentType, text });
+        processGlobalAudioQueue();
     };
 
-    const processAudioQueue = async (studentId: string, studentType: string) => {
-        if (isPlayingMap.current[studentId]) return;
+    const processGlobalAudioQueue = async () => {
+        // If audio is already playing, wait. The onended callback will trigger the next.
+        if (isGlobalPlaying.current) return;
 
-        if (!audioQueues.current[studentId] || audioQueues.current[studentId].length === 0) {
-            setSpeakingStudents(prev => ({ ...prev, [studentId]: false }));
+        // If queue is empty, nobody is speaking
+        if (globalAudioQueue.current.length === 0) {
+            setSpeakingStudents({});
             return;
         }
 
-        isPlayingMap.current[studentId] = true;
-        setSpeakingStudents(prev => ({ ...prev, [studentId]: true }));
+        isGlobalPlaying.current = true;
+        const nextUtterance = globalAudioQueue.current.shift()!;
 
-        const text = audioQueues.current[studentId].shift()!;
+        // Update UI to show who is currently speaking
+        setSpeakingStudents({ [nextUtterance.studentId]: true });
 
         try {
             const response = await fetch('/api/tts', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text, studentType }),
+                body: JSON.stringify({ text: nextUtterance.text, studentType: nextUtterance.studentType }),
             });
 
             if (response.ok) {
@@ -121,7 +124,8 @@ export default function VirtualClassroom() {
 
                 await new Promise((resolve) => {
                     audio.onended = resolve;
-                    audio.onerror = resolve; // proceed on error too
+                    // Proceed even on error so the queue doesn't lock up forever
+                    audio.onerror = resolve;
                     audio.play().catch(resolve);
                 });
                 URL.revokeObjectURL(url);
@@ -130,8 +134,11 @@ export default function VirtualClassroom() {
             console.error("TTS play error", e);
         }
 
-        isPlayingMap.current[studentId] = false;
-        processAudioQueue(studentId, studentType); // play next in queue
+        // Finished playing this utterance
+        isGlobalPlaying.current = false;
+
+        // Immediately process the next item in the global queue
+        processGlobalAudioQueue();
     };
     const { isListening, startListening, stopListening, fullTranscript, stableBuffer, setStableBuffer } = useAzureSTT({ language: 'en-US' });
 
@@ -328,23 +335,25 @@ export default function VirtualClassroom() {
                                             currentMessage: textPart || null,
                                             raisedHand: meta.action === 'RAISE_HAND',
                                         };
-
-                                        if (meta.action !== 'LISTEN' && meta.action !== 'RAISE_HAND' && textPart) {
-                                            setLiveTranscript(lt => [
-                                                ...lt,
-                                                {
-                                                    id: `s-${sid}-${Date.now()}`,
-                                                    speaker: updated[idx].name,
-                                                    text: textPart,
-                                                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                                                    emotion: meta.emotion || 'neutral'
-                                                }
-                                            ]);
-                                            toast(`${updated[idx].name} says:`, { description: textPart, duration: 4000 });
-                                        }
                                     }
                                     return updated;
                                 });
+
+                                // Perform side effects outside the state reducer to prevent duplicate execution in Strict Mode
+                                const stuMatch = updatedStudentsForOrchestrator.find(s => s.id === sid);
+                                if (stuMatch && meta.action !== 'LISTEN' && meta.action !== 'RAISE_HAND' && textPart) {
+                                    setLiveTranscript(lt => [
+                                        ...lt,
+                                        {
+                                            id: `s-${sid}-${Date.now()}`,
+                                            speaker: stuMatch.name,
+                                            text: textPart,
+                                            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                                            emotion: meta.emotion || 'neutral'
+                                        }
+                                    ]);
+                                    toast(`${stuMatch.name} says:`, { description: textPart, duration: 4000 });
+                                }
                             }
                         } catch (err) {
                             console.error("NDJSON Stream Parse error", err, line);
