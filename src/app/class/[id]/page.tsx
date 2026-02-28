@@ -497,6 +497,9 @@ export default function VirtualClassroom() {
                     <Link href="/dashboard" className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-500 dark:text-slate-400">
                         <ArrowLeft size={20} />
                     </Link>
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 dark:bg-sky-900/40 text-sky-500 dark:text-sky-400 text-2xl">
+                        {initialClass.emoji || '🏫'}
+                    </div>
                     <div>
                         <h1 className="font-bold text-slate-800 dark:text-slate-100 text-lg leading-tight">{initialClass.subject}</h1>
                         <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{initialClass.name}</p>
