@@ -78,4 +78,6 @@ export interface TranscriptEntry {
     text: string;
     timestamp: string;
     emotion?: 'neutral' | 'happy' | 'confused' | 'bored' | 'engaged';
+    // Engagement snapshot injected after each orchestrator tick (silent + speaking students)
+    moodSnapshot?: Record<string, number>; // studentName -> moodScore (0-100)
 }

@@ -234,6 +234,18 @@ export default function VirtualClassroom() {
                                     s.raisedHand = false;
                                 }
                             });
+
+                            // Inject engagement snapshot for ALL students (including silent ones)
+                            const snapshot: Record<string, number> = {};
+                            updated.forEach(s => { snapshot[s.name] = s.moodScore; });
+                            setLiveTranscript(prev => [...prev, {
+                                id: `snap-${Date.now()}`,
+                                speaker: '__snapshot__',
+                                text: '',
+                                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                                moodSnapshot: snapshot
+                            }]);
+
                             return updated;
                         });
                     }
@@ -343,6 +355,18 @@ export default function VirtualClassroom() {
                                             toast(`${updated[idx].name} says:`, { description: textPart, duration: 4000 });
                                         }
                                     }
+
+                                    // Inject engagement snapshot for ALL students after this student's response arrives
+                                    const snapshot: Record<string, number> = {};
+                                    updated.forEach(s => { snapshot[s.name] = s.moodScore; });
+                                    setLiveTranscript(lt => [...lt, {
+                                        id: `snap-${sid}-${Date.now()}`,
+                                        speaker: '__snapshot__',
+                                        text: '',
+                                        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                                        moodSnapshot: snapshot
+                                    }]);
+
                                     return updated;
                                 });
                             }
