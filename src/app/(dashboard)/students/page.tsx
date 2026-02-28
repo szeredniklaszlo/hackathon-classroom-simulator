@@ -127,6 +127,15 @@ export default function StudentsPage() {
         }
     }, [students.length]); // Wait for initial data load to be safe
 
+    // Handle ESC key to close drawer
+    useEffect(() => {
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') closeDrawer();
+        };
+        window.addEventListener('keydown', handleEsc);
+        return () => window.removeEventListener('keydown', handleEsc);
+    }, []);
+
     const closeDrawer = () => {
         setIsDrawerOpen(false);
     };
