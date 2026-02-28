@@ -63,6 +63,8 @@ export default function StudentsPage() {
     const [attentionSpan, setAttentionSpan] = useState(50);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isAIGenerating, setIsAIGenerating] = useState(false);
+    // null = no pending card; 'manual' | 'ai' = which flow is loading
+    const [pendingPersona, setPendingPersona] = useState<'manual' | 'ai' | null>(null);
 
     // Validation State
     const [nameError, setNameError] = useState('');
@@ -170,6 +172,10 @@ export default function StudentsPage() {
         if (!isValid) return;
 
         setIsGenerating(true);
+        // Close drawer immediately and show skeleton card
+        closeDrawer();
+        if (!editingStudent) setPendingPersona('manual');
+
         const type = determineStudentType();
         const condition = [...newConditions, ...(customCondition.trim() ? [customCondition.trim()] : [])].join(', ') || null;
 
@@ -224,20 +230,21 @@ export default function StudentsPage() {
                     description: `${newName} added to the persona pool.`,
                 });
             }
-            closeDrawer();
         } catch (error: any) {
             console.error("Failed to save student:", error);
             toast.error('An error occurred while saving.', {
                 description: error.message,
             });
         } finally {
+            setPendingPersona(null);
             setIsGenerating(false);
         }
     };
 
     const generateAIPersonaDirect = async () => {
         setIsAIGenerating(true);
-        toast.info("Generating AI Persona...", { id: "ai-gen" });
+        // Close drawer and show skeleton card immediately
+        setPendingPersona('ai');
         try {
             const response = await fetch('/api/students/generate', { method: 'POST' });
             if (!response.ok) {
@@ -264,12 +271,13 @@ export default function StudentsPage() {
                 };
 
                 addStudent(newStudent);
-                toast.success('AI Persona Generated!', { id: "ai-gen", description: `${newStudent.name} has been added.` });
+                toast.success('AI Persona Generated!', { description: `${newStudent.name} has been added.` });
             }
         } catch (err: any) {
             console.error(err);
-            toast.error('Generation failed', { id: "ai-gen", description: err.message });
+            toast.error('Generation failed', { description: err.message });
         } finally {
+            setPendingPersona(null);
             setIsAIGenerating(false);
         }
     };
@@ -344,13 +352,54 @@ export default function StudentsPage() {
                 <div className="flex h-64 items-center justify-center">
                     <Loader2 className="h-8 w-8 animate-spin text-indigo-500 dark:text-indigo-400" />
                 </div>
-            ) : students.length === 0 ? (
+            ) : students.length === 0 && !pendingPersona ? (
                 <div className="flex flex-col items-center justify-center h-64 text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-100 dark:border-slate-700/50 border-dashed">
                     <UserPlus className="h-12 w-12 text-slate-300 dark:text-slate-600 mb-3" />
                     <p>No students generated yet.</p>
                 </div>
             ) : (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {/* Skeleton loading card — shown at top while API is in flight */}
+                    {pendingPersona && (
+                        <div className="relative flex flex-col items-start w-full overflow-hidden rounded-2xl bg-white dark:bg-slate-800/80 p-5 shadow-sm ring-1 ring-slate-100 dark:ring-slate-700/50">
+                            {/* Animated shine overlay */}
+                            <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.6s_infinite] bg-gradient-to-r from-transparent via-white/40 dark:via-slate-700/40 to-transparent" style={{ animationName: 'shimmer' }} />
+
+                            {/* Avatar + condition bar */}
+                            <div className="flex w-full items-start justify-between">
+                                <div className="h-12 w-12 rounded-2xl bg-slate-200 dark:bg-slate-700 animate-pulse" />
+                                <div className="h-5 w-24 rounded-full bg-indigo-100 dark:bg-indigo-900/40 animate-pulse" />
+                            </div>
+
+                            {/* Name + age */}
+                            <div className="mt-4 w-full">
+                                <div className="h-5 w-32 rounded-lg bg-slate-200 dark:bg-slate-700 animate-pulse mb-2" />
+                                <div className="h-3.5 w-20 rounded-lg bg-slate-100 dark:bg-slate-700/60 animate-pulse" />
+                            </div>
+
+                            {/* Personality box */}
+                            <div className="mt-4 w-full rounded-xl bg-slate-50 dark:bg-slate-800/50 p-3 space-y-2">
+                                <div className="h-3 w-20 rounded bg-slate-200 dark:bg-slate-700 animate-pulse" />
+                                <div className="h-3 w-full rounded bg-slate-100 dark:bg-slate-700/60 animate-pulse" />
+                                <div className="h-3 w-4/5 rounded bg-slate-100 dark:bg-slate-700/60 animate-pulse" />
+                            </div>
+
+                            {/* Central spinner */}
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/80 dark:bg-slate-900/80 shadow-lg backdrop-blur-sm ring-1 ring-slate-200 dark:ring-slate-700">
+                                    <Loader2 size={22} className="animate-spin text-indigo-500" />
+                                </div>
+                            </div>
+
+                            {/* Label */}
+                            <div className="absolute bottom-4 left-0 right-0 flex justify-center">
+                                <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 animate-pulse">
+                                    {pendingPersona === 'ai' ? 'AI generating…' : 'Saving persona…'}
+                                </span>
+                            </div>
+                        </div>
+                    )}
+
                     {sortedStudents.map((student) => (
                         <button
                             key={student.id}
