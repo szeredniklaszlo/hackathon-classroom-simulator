@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, UserSquare, BrainCircuit, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, UserSquare, BrainCircuit, LogOut, MessageSquareQuote } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -12,6 +12,7 @@ const navLinks = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Classes', href: '/classes', icon: Users },
     { name: 'Student Personas', href: '/students', icon: UserSquare },
+    { name: 'Debate Coach', href: '/debate', icon: MessageSquareQuote },
 ];
 
 export default function Sidebar() {

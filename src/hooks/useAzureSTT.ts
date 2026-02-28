@@ -12,6 +12,9 @@ export function useAzureSTT({ language = 'en-US' }: UseAzureSTTProps = {}) {
     const recognizerRef = useRef<sdk.SpeechRecognizer | null>(null);
 
     const startListening = useCallback(() => {
+        setStableBuffer('');
+        setTranscript('');
+
         const speechKey = process.env.NEXT_PUBLIC_AZURE_SPEECH_KEY;
         const speechRegion = process.env.NEXT_PUBLIC_AZURE_SPEECH_REGION;
 
