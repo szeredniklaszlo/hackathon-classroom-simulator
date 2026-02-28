@@ -1,9 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { createClient } from '@/utils/supabase/server';
 
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
@@ -12,6 +8,8 @@ export async function GET(request: Request) {
     if (!classId) {
         return NextResponse.json({ error: 'classId parameter is required' }, { status: 400 });
     }
+
+    const supabase = await createClient();
 
     try {
         // 1. Fetch the LATEST session for this class

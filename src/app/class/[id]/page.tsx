@@ -156,13 +156,27 @@ export default function VirtualClassroom() {
                             });
                         }
 
-                        // Update students based on orchestrator response
+                        // Process responses safely outside of state updater
                         if (data.responses && data.responses.length > 0) {
+                            // Extract transcript entries first
+                            data.responses.forEach((res: any) => {
+                                const student = students.find(s => s.id === res.studentId);
+                                if (student && res.action !== 'LISTEN' && res.action !== 'RAISE_HAND' && res.message) {
+                                    newEntries.push({
+                                        id: `s-${res.studentId}-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+                                        speaker: student.name,
+                                        text: res.message,
+                                        timestamp,
+                                        emotion: res.newEngagement > 70 ? 'happy' : res.newEngagement < 40 ? 'confused' : 'neutral'
+                                    });
+                                    toast(`${student.name} says:`, { description: res.message, duration: 4000 });
+                                }
+                            });
+
+                            // Now update students pure state
                             setStudents(prev => {
                                 const updated = [...prev];
 
-                                // Először mindenkinek töröljük az előző cselekvését (hogy eltűnjenek a régi szövegbuborékok)
-                                // De a hangulatuk/engagement marad
                                 updated.forEach(s => {
                                     s.currentAction = 'LISTEN';
                                     s.currentMessage = null;
@@ -179,17 +193,6 @@ export default function VirtualClassroom() {
                                             currentMessage: res.message,
                                             raisedHand: res.action === 'RAISE_HAND',
                                         };
-                                        if (res.action !== 'LISTEN' && res.action !== 'RAISE_HAND' && res.message) {
-                                            newEntries.push({
-                                                id: `s-${res.studentId}-${Date.now()}`,
-                                                speaker: updated[idx].name,
-                                                text: res.message,
-                                                timestamp,
-                                                // rudimentary emotion inference from score
-                                                emotion: res.newEngagement > 70 ? 'happy' : res.newEngagement < 40 ? 'confused' : 'neutral'
-                                            });
-                                            toast(`${updated[idx].name} says:`, { description: res.message, duration: 4000 });
-                                        }
                                     }
                                 });
                                 return updated;
