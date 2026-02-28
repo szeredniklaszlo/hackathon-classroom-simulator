@@ -398,8 +398,12 @@ export default function ClassesPage() {
                                 <div className="space-y-2">
                                     {(selectedClass.students || []).map((student, idx) => (
                                         <div key={`${student.id}-${idx}`} className="flex items-center gap-3 rounded-lg border border-slate-100 dark:border-slate-800 p-2">
-                                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 text-xl">
-                                                {student.emoji}
+                                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 overflow-hidden">
+                                                <img
+                                                    src={student.avatar_url || `https://wsrv.nl/?url=${encodeURIComponent(`avatar.iran.liara.run/public/${(student.name?.split(' ')[0].toLowerCase().endsWith('a') || student.name?.split(' ')[0].toLowerCase().endsWith('e') || student.name?.split(' ')[0].toLowerCase().endsWith('i') || student.name?.split(' ')[0].toLowerCase().endsWith('y')) ? 'girl' : 'boy'}?username=` + student.name + '_' + student.age)}`}
+                                                    alt={student.name}
+                                                    className="w-full h-full object-cover"
+                                                />
                                             </div>
                                             <div className="flex-1">
                                                 <div className="font-semibold text-slate-900 dark:text-slate-100">{student.name}</div>
@@ -507,7 +511,13 @@ export default function ClassesPage() {
                                                     }`}
                                             >
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-xl">{student.emoji}</span>
+                                                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-700 overflow-hidden border border-slate-200 dark:border-slate-600">
+                                                        <img
+                                                            src={student.avatar_url || `https://wsrv.nl/?url=${encodeURIComponent(`avatar.iran.liara.run/public/${(student.name?.split(' ')[0].toLowerCase().endsWith('a') || student.name?.split(' ')[0].toLowerCase().endsWith('e') || student.name?.split(' ')[0].toLowerCase().endsWith('i') || student.name?.split(' ')[0].toLowerCase().endsWith('y')) ? 'girl' : 'boy'}?username=` + student.name + '_' + student.age)}`}
+                                                            alt={student.name}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    </div>
                                                     <span className="font-semibold text-slate-900 dark:text-slate-100">{student.name}</span>
                                                     {student.condition && (
                                                         <span className="bg-indigo-50 dark:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300 text-[10px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded-md truncate max-w-[100px]">

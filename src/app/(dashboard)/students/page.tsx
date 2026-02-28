@@ -434,9 +434,8 @@ export default function StudentsPage() {
                 <div className="flex-1 overflow-y-auto p-6">
                     <form id="generate-student-form" onSubmit={handleGenerateStudent} noValidate className="space-y-6">
 
-                        {/* Basic Info */}
-                        <div className="grid grid-cols-4 gap-4">
-                            <div className="col-span-3">
+                        <div className="grid grid-cols-1 gap-4">
+                            <div>
                                 <label className="mb-1.5 block text-sm font-semibold text-slate-900 dark:text-slate-200">Student Name *</label>
                                 <input
                                     type="text"
@@ -453,15 +452,6 @@ export default function StudentsPage() {
                                         {nameError}
                                     </p>
                                 )}
-                            </div>
-                            <div className="col-span-1">
-                                <label className="mb-1.5 block text-sm font-semibold text-slate-900 dark:text-slate-200">Emoji *</label>
-                                <input
-                                    type="text"
-                                    value={newEmoji}
-                                    onChange={(e) => setNewEmoji(e.target.value)}
-                                    className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent dark:bg-slate-900/50 dark:text-slate-100 px-4 py-2.5 text-center text-xl outline-none transition-all focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 dark:focus:ring-indigo-500/20"
-                                />
                             </div>
                         </div>
 
