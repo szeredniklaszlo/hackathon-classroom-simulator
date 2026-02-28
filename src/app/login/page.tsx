@@ -87,6 +87,22 @@ export default async function LoginPage({
                 </div>
 
                 <GoogleLoginButton />
+
+                <div className="relative flex items-center gap-4">
+                    <div className="flex-1 border-t dark:border-slate-700" />
+                    <span className="text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">or</span>
+                    <div className="flex-1 border-t dark:border-slate-700" />
+                </div>
+
+                <a
+                    href="/dashboard"
+                    className="flex w-full items-center justify-center gap-2 rounded-md border border-slate-200 dark:border-slate-700 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
+                    </svg>
+                    Continue as Guest
+                </a>
             </div>
         </div>
     )

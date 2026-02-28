@@ -32,14 +32,25 @@ export async function updateSession(request: NextRequest) {
         data: { user },
     } = await supabase.auth.getUser()
 
-    // Protect all routes except /login and /auth. If needed, you can adjust this logic.
-    if (
-        !user &&
-        !request.nextUrl.pathname.startsWith('/login') &&
-        !request.nextUrl.pathname.startsWith('/auth') &&
-        !request.nextUrl.pathname.startsWith('/api') &&
-        request.nextUrl.pathname !== '/'
-    ) {
+    // Public paths that don't require authentication
+    const publicPaths = [
+        '/login',
+        '/auth',
+        '/api',
+        '/',
+        '/dashboard',
+        '/classes',
+        '/students',
+        '/class',
+        '/report',
+        '/analytics',
+    ];
+
+    const isPublic = publicPaths.some(p =>
+        request.nextUrl.pathname === p || request.nextUrl.pathname.startsWith(p + '/')
+    );
+
+    if (!user && !isPublic) {
         const url = request.nextUrl.clone()
         url.pathname = '/login'
         return NextResponse.redirect(url)
