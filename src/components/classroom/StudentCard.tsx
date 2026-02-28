@@ -73,7 +73,7 @@ export default function StudentCard({ student, idx, isSpeaking = false }: { stud
 
             <div className={`mb-4 w-24 h-24 rounded-full flex items-center justify-center relative z-0 transition-all duration-300 ${isSpeaking ? 'scale-110 shadow-lg -translate-y-2' : 'shadow-md translate-y-0'} ring-2 ring-white/50 dark:ring-white/10 bg-slate-100 dark:bg-slate-800`}>
                 <img
-                    src={`https://wsrv.nl/?url=${encodeURIComponent(`avatar.iran.liara.run/public/${gender}?username=` + student.name + '_' + student.age)}`}
+                    src={student.avatar_url || `https://wsrv.nl/?url=${encodeURIComponent(`avatar.iran.liara.run/public/${guessGender(student.name)}?username=` + student.name + '_' + student.age)}`}
                     alt={`${student.name} avatar`}
                     className={`w-full h-full object-cover rounded-full ${isSpeaking ? 'animate-[bounce_0.5s_infinite]' : ''}`}
                 />

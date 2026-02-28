@@ -61,6 +61,15 @@ export default function VirtualClassroom() {
         }
     }, [isLoadingData, initialClass, router]);
 
+    // Handle ESC key to "jump out" to dashboard
+    useEffect(() => {
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') router.push('/dashboard');
+        };
+        window.addEventListener('keydown', handleEsc);
+        return () => window.removeEventListener('keydown', handleEsc);
+    }, [router]);
+
     // Update students state when initialClass becomes available, ensuring moodScore exists
     const [students, setStudents] = useState<Student[]>(
         (initialClass?.students || []).map(s => ({
@@ -241,6 +250,18 @@ export default function VirtualClassroom() {
                                     s.raisedHand = false;
                                 }
                             });
+
+                            // Inject engagement snapshot for ALL students (including silent ones)
+                            const snapshot: Record<string, number> = {};
+                            updated.forEach(s => { snapshot[s.name] = s.moodScore; });
+                            setLiveTranscript(prev => [...prev, {
+                                id: `snap-${Date.now()}`,
+                                speaker: '__snapshot__',
+                                text: '',
+                                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                                moodSnapshot: snapshot
+                            }]);
+
                             return updated;
                         });
                     }
@@ -336,6 +357,18 @@ export default function VirtualClassroom() {
                                             raisedHand: meta.action === 'RAISE_HAND',
                                         };
                                     }
+
+                                    // Inject engagement snapshot for ALL students after this student's response arrives
+                                    const snapshot: Record<string, number> = {};
+                                    updated.forEach(s => { snapshot[s.name] = s.moodScore; });
+                                    setLiveTranscript(lt => [...lt, {
+                                        id: `snap-${sid}-${Date.now()}`,
+                                        speaker: '__snapshot__',
+                                        text: '',
+                                        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                                        moodSnapshot: snapshot
+                                    }]);
+
                                     return updated;
                                 });
 
@@ -534,7 +567,7 @@ export default function VirtualClassroom() {
                                 >
                                     <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl border ${getMoodColor(student.moodScore)} overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0`}>
                                         <img
-                                            src={`https://wsrv.nl/?url=${encodeURIComponent(`avatar.iran.liara.run/public/${guessGender(student.name)}?username=` + student.name + '_' + student.age)}`}
+                                            src={student.avatar_url || `https://wsrv.nl/?url=${encodeURIComponent(`avatar.iran.liara.run/public/${(student.name?.split(' ')[0].toLowerCase().endsWith('a') || student.name?.split(' ')[0].toLowerCase().endsWith('e') || student.name?.split(' ')[0].toLowerCase().endsWith('i') || student.name?.split(' ')[0].toLowerCase().endsWith('y')) ? 'girl' : 'boy'}?username=` + student.name + '_' + student.age)}`}
                                             alt={`${student.name} avatar`}
                                             className="w-full h-full object-cover"
                                         />

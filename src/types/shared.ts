@@ -58,6 +58,7 @@ export interface Student {
     personality?: string;
     prompt?: string;
     condition?: string | null;
+    avatar_url?: string;
     created_at?: string;
     currentAction?: 'LISTEN' | 'RAISE_HAND' | 'ANSWER_DIRECTLY' | 'WHISPER' | 'INTERRUPT';
     currentMessage?: string | null;
@@ -78,4 +79,6 @@ export interface TranscriptEntry {
     text: string;
     timestamp: string;
     emotion?: 'neutral' | 'happy' | 'confused' | 'bored' | 'engaged';
+    // Engagement snapshot injected after each orchestrator tick (silent + speaking students)
+    moodSnapshot?: Record<string, number>; // studentName -> moodScore (0-100)
 }
