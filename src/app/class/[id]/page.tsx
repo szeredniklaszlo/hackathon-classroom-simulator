@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { Play, Square, Save, UserPlus, Hand, ArrowLeft, Clock, Mic, MicOff } from 'lucide-react';
 import Link from 'next/link';
 import { useAzureSTT } from '@/hooks/useAzureSTT';
-import StudentCard from '@/components/classroom/StudentCard';
+import StudentCard, { guessGender } from '@/components/classroom/StudentCard';
 
 export default function VirtualClassroom() {
     const params = useParams();
@@ -324,14 +324,6 @@ export default function VirtualClassroom() {
                             Live: {formatTime(seconds)}
                         </div>
                     )}
-                    <button onClick={handleSaveRoster} className="flex items-center gap-2 text-slate-600 dark:text-slate-400 hover:text-primary dark:hover:text-indigo-400 transition-colors hover:bg-slate-50 dark:hover:bg-slate-800 px-3 py-2 rounded-lg text-sm font-semibold border border-transparent hover:border-slate-200 dark:hover:border-slate-700">
-                        <Save size={18} />
-                        <span className="hidden sm:inline">Save Roster</span>
-                    </button>
-                    <button onClick={handleAddStudent} className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors px-3 py-2 rounded-lg text-sm font-semibold">
-                        <UserPlus size={18} />
-                        <span className="hidden sm:inline">Add Student</span>
-                    </button>
                 </div>
             </header>
 
@@ -387,8 +379,12 @@ export default function VirtualClassroom() {
                                     animate={{ opacity: 1, x: 0 }}
                                     className="bg-white dark:bg-slate-800/80 border border-slate-100 dark:border-slate-700/50 p-3 rounded-2xl shadow-sm flex items-center gap-3"
                                 >
-                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl border ${getMoodColor(student.moodScore)}`}>
-                                        {student.emoji}
+                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl border ${getMoodColor(student.moodScore)} overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0`}>
+                                        <img
+                                            src={`https://wsrv.nl/?url=${encodeURIComponent(`avatar.iran.liara.run/public/${guessGender(student.name)}?username=` + student.name + '_' + student.age)}`}
+                                            alt={`${student.name} avatar`}
+                                            className="w-full h-full object-cover"
+                                        />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex justify-between items-center mb-1">

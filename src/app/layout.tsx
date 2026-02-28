@@ -7,8 +7,8 @@ import { ThemeProvider } from "@/context/ThemeContext";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "AI Classroom & Debate Coach",
-  description: "Minds & Machines Hackathon Education Challenge Prototype",
+  title: "MindSim AI",
+  description: "Minds & Machines Hackathon Education Challenge",
 };
 
 export default function RootLayout({

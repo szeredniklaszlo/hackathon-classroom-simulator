@@ -46,7 +46,7 @@ export default function Dashboard() {
             {/* Header */}
             <div>
                 <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">{greeting}, {userName} 👋</h1>
-                <p className="mt-1 text-slate-500 dark:text-slate-400">Ready to challenge your teaching skills today?</p>
+                <p className="mt-1 text-slate-500 dark:text-slate-400">Welcome to your MindSim AI classroom command center.</p>
             </div>
 
             {/* Quick Actions Grid */}

@@ -13,7 +13,21 @@ const getMoodBg = (score: number) => {
     return "bg-green-50 dark:bg-green-900/20";
 };
 
+// Simple heuristic to guess gender from name (Hungarian/English focus)
+export const guessGender = (fullName: string): 'boy' | 'girl' => {
+    if (!fullName) return 'boy';
+    const firstName = fullName.split(' ')[0].toLowerCase();
+    // Common girl name endings
+    if (firstName.endsWith('a') || firstName.endsWith('e') || firstName.endsWith('i') || firstName.endsWith('y')) {
+        return 'girl';
+    }
+    return 'boy';
+};
+
 export default function StudentCard({ student, idx }: { student: Student, idx: number }) {
+    // Derived properties
+    const gender = guessGender(student.name);
+
     // Local state for displaying the message temporarily
     const [isSpeaking, setIsSpeaking] = useState(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -122,8 +136,12 @@ export default function StudentCard({ student, idx }: { student: Student, idx: n
                 </div>
             )}
 
-            <div className={`text-6xl mb-4 bg-white/50 dark:bg-white/10 w-24 h-24 rounded-full flex items-center justify-center shadow-inner border border-white dark:border-white/10 backdrop-blur-sm relative z-0 transition-transform duration-300 ${isSpeaking ? 'scale-110' : ''}`}>
-                {student.emoji}
+            <div className={`mb-4 w-24 h-24 rounded-full flex items-center justify-center relative z-0 transition-all duration-300 ${isSpeaking ? 'scale-110 shadow-lg -translate-y-2' : 'shadow-md translate-y-0'} ring-2 ring-white/50 dark:ring-white/10 bg-slate-100 dark:bg-slate-800`}>
+                <img
+                    src={`https://wsrv.nl/?url=${encodeURIComponent(`avatar.iran.liara.run/public/${gender}?username=` + student.name + '_' + student.age)}`}
+                    alt={`${student.name} avatar`}
+                    className={`w-full h-full object-cover rounded-full ${isSpeaking ? 'animate-[bounce_0.5s_infinite]' : ''}`}
+                />
 
                 {/* Speaking animation rings */}
                 {isSpeaking && (
@@ -136,7 +154,7 @@ export default function StudentCard({ student, idx }: { student: Student, idx: n
 
             <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur px-4 py-2 rounded-xl text-center shadow-sm w-full border border-white/50 dark:border-slate-700/50 z-10 relative">
                 <h4 className="font-extrabold text-slate-800 dark:text-slate-100 tracking-tight text-lg truncate">{student.name}</h4>
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">{student.type} • {student.age}y</p>
+                <p className="text-base font-semibold text-slate-500 dark:text-slate-400 mt-0.5" title={student.type}>{student.emoji} <span className="text-xs ml-1 font-medium text-slate-400">• {student.age}y</span></p>
             </div>
         </motion.div>
     );
