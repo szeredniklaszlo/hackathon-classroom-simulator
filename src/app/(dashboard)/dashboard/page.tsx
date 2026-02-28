@@ -206,7 +206,7 @@ export default function Dashboard() {
                             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Average class satisfaction score</p>
                         </div>
                         <span className="flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2.5 py-1 rounded-full">
-                            <TrendingUp size={12} /> +14%
+                            <TrendingUp size={12} /> +12%
                         </span>
                     </div>
 
