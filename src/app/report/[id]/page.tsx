@@ -164,6 +164,15 @@ export default function VirtualDiary() {
                     await generateAIFeedback(data.transcript);
 
                     // Compute Live Class Statistics from Transcript
+                    // Primary: use moodSnapshot entries (exact numeric mood scores for ALL students)
+                    // Fallback: use emotion strings from spoken entries (for old transcripts)
+
+                    const timelineMap = new Map<string, { total: number, count: number }>();
+                    const studentStatsMap = new Map<string, { total: number, count: number, max: number, min: number }>();
+
+                    let firstTimeMs = 0;
+                    let lastTimeMs = 0;
+
                     const emotionToScore = (emotion?: string) => {
                         if (emotion === 'happy') return 90;
                         if (emotion === 'excited') return 95;
@@ -174,29 +183,57 @@ export default function VirtualDiary() {
                         return null;
                     };
 
-                    const timelineMap = new Map<string, { total: number, count: number }>();
-                    const studentStatsMap = new Map<string, { total: number, count: number, max: number, min: number }>();
-
-                    let firstTimeMs = 0;
-                    let lastTimeMs = 0;
+                    // Check whether this transcript has rich snapshot data
+                    const hasSnapshots = data.transcript.some((e: TranscriptEntry) => e.speaker === '__snapshot__' && e.moodSnapshot);
 
                     data.transcript.forEach((entry: TranscriptEntry, idx: number) => {
-                        const timeMatch = entry.timestamp.match(/(\d+):(\d+)\s*(AM|PM)/i);
-                        let timeMs = Date.now();
-                        if (timeMatch) {
-                            let hours = parseInt(timeMatch[1]);
-                            const mins = parseInt(timeMatch[2]);
-                            const ampm = timeMatch[3].toUpperCase();
-                            if (ampm === 'PM' && hours < 12) hours += 12;
-                            if (ampm === 'AM' && hours === 12) hours = 0;
-                            const d = new Date();
-                            d.setHours(hours, mins, 0, 0);
-                            timeMs = d.getTime();
+                        // Track timing for duration computation (use all real entries)
+                        if (entry.speaker !== '__snapshot__') {
+                            const timeMatch = entry.timestamp.match(/(\d+):(\d+)\s*(AM|PM)/i);
+                            let timeMs = Date.now();
+                            if (timeMatch) {
+                                let hours = parseInt(timeMatch[1]);
+                                const mins = parseInt(timeMatch[2]);
+                                const ampm = timeMatch[3].toUpperCase();
+                                if (ampm === 'PM' && hours < 12) hours += 12;
+                                if (ampm === 'AM' && hours === 12) hours = 0;
+                                const d = new Date();
+                                d.setHours(hours, mins, 0, 0);
+                                timeMs = d.getTime();
+                            }
+                            if (firstTimeMs === 0) firstTimeMs = timeMs;
+                            lastTimeMs = timeMs;
                         }
-                        if (idx === 0) firstTimeMs = timeMs;
-                        lastTimeMs = timeMs;
 
-                        if (entry.emotion) {
+                        // --- PATH 1: Rich snapshot entries (preferred — exact numeric scores) ---
+                        if (entry.speaker === '__snapshot__' && entry.moodSnapshot) {
+                            const scores = Object.values(entry.moodSnapshot);
+                            if (scores.length === 0) return;
+
+                            const avgScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+                            const minuteKey = entry.timestamp;
+
+                            if (!timelineMap.has(minuteKey)) timelineMap.set(minuteKey, { total: 0, count: 0 });
+                            timelineMap.get(minuteKey)!.total += avgScore;
+                            timelineMap.get(minuteKey)!.count += 1;
+
+                            // Per-student stats
+                            Object.entries(entry.moodSnapshot).forEach(([studentName, score]) => {
+                                const existing = studentStatsMap.get(studentName);
+                                if (!existing) {
+                                    studentStatsMap.set(studentName, { total: score, count: 1, max: score, min: score });
+                                } else {
+                                    existing.total += score;
+                                    existing.count += 1;
+                                    if (score > existing.max) existing.max = score;
+                                    if (score < existing.min) existing.min = score;
+                                }
+                            });
+                            return;
+                        }
+
+                        // --- PATH 2: Legacy emotion fallback (only used when no snapshots exist) ---
+                        if (!hasSnapshots && entry.emotion && entry.speaker !== 'Teacher') {
                             const score = emotionToScore(entry.emotion);
                             if (score !== null) {
                                 const minuteKey = entry.timestamp;
@@ -204,14 +241,14 @@ export default function VirtualDiary() {
                                 timelineMap.get(minuteKey)!.total += score;
                                 timelineMap.get(minuteKey)!.count += 1;
 
-                                const studentEntry = studentStatsMap.get(entry.speaker);
-                                if (!studentEntry) {
+                                const existing = studentStatsMap.get(entry.speaker);
+                                if (!existing) {
                                     studentStatsMap.set(entry.speaker, { total: score, count: 1, max: score, min: score });
                                 } else {
-                                    studentEntry.total += score;
-                                    studentEntry.count += 1;
-                                    if (score > studentEntry.max) studentEntry.max = score;
-                                    if (score < studentEntry.min) studentEntry.min = score;
+                                    existing.total += score;
+                                    existing.count += 1;
+                                    if (score > existing.max) existing.max = score;
+                                    if (score < existing.min) existing.min = score;
                                 }
                             }
                         }
